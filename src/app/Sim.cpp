@@ -126,6 +126,7 @@ void Sim::reset() {
     for (int i = 0; i < REG_COUNT; ++i) { shownRegs[i] = cpu.reg(i).u(); regFlash[i] = 0; }
     shownFlags = cpu.flags();
     Clock::instance().reset();
+    Instruction::executedCount = 0;      // static member shared by every Instruction
     ++runGen;
     pipeValid_ = false;
     if (program) status = "Reset - RIP points to the first instruction";

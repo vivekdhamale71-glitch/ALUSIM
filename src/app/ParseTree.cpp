@@ -19,6 +19,7 @@
 #include <functional>
 
 #include "CG_2310218L/CO1_Primitives/GL.h"
+#include "CG_2310218L/CO4_ProjectionViewing/Camera.h"
 #include "app/Views.h"
 
 namespace vas::ui {
@@ -66,26 +67,7 @@ void ChipView::applyCamera(const Rect& vp, float yaw, float pitch, float dist, f
     float f = easeInOutCubic(flat_);
     float dYaw = std::fmod(flatYaw - yaw + 540.f, 360.f) - 180.f;   // shortest way round
     float y = yaw + dYaw * f, p = pitch + (flatPitch - pitch) * f;
-    // dolly zoom: narrow the field of view while backing away, so the
-    // perspective flattens smoothly into a parallel projection          [CG CO4]
-    float fov = 38 + (2.5f - 38) * f;
-    float base = std::tan(19 * float(M_PI) / 180);
-    float d = dist * base / std::tan(fov * 0.5f * float(M_PI) / 180);
-    float aspect = vp.w / std::max(1.f, vp.h);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    if (f > 0.985f) {
-        float s = dist * base;
-        glOrtho(-s * aspect, s * aspect, -s, s, -1000, 1000);
-        d = dist;
-    } else {
-        gluPerspective(fov, aspect, std::max(0.3f, d - dist * 1.6f), d + dist * 4);
-    }
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    float yr = y * float(M_PI) / 180, pr = p * float(M_PI) / 180;
-    gluLookAt(tx + d * std::cos(pr) * std::sin(yr), ty + d * std::sin(pr), tz + d * std::cos(pr) * std::cos(yr), tx, ty, tz,
-              0, 1, 0);
+    orbitCamera(vp.w / std::max(1.f, vp.h), y, p, dist, f, tx, ty, tz);   // CG CO4 Camera.cpp
 }
 
 // ------------------------------------------------------------------- draw

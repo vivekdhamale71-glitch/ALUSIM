@@ -10,9 +10,9 @@
 #include "PL_2310214L/CO3_StackQueue/Queue.h"
 #include "PL_2310214L/CO4_SearchingSorting/Searching.h"
 #include "PL_2310214L/CO3_StackQueue/Stack.h"
-#include "COA_2310221L/CO1_Architecture/CPU.h"
+#include "core/CPU.h"
 #include "PSOOP_2310261L/CO2_ReduceComplexity/Errors.h"
-#include "COA_2310221L/CO2_AssemblyISA/Instruction.h"
+#include "core/Instruction.h"
 
 namespace vas::core {
 

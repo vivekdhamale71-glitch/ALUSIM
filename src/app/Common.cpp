@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "COA_2310221L/CO2_AssemblyISA/Assembler.h"
+#include "core/Assembler.h"
 #include "CG_2310218L/CO3_ObjectAlgorithms/Raster.h"
 #include "app/Views.h"
 

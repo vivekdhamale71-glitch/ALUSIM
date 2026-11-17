@@ -6,13 +6,13 @@
 #include <string>
 #include <vector>
 
-#include "COA_2310221L/CO3_ComputerArithmetic/Arithmetic.h"
-#include "COA_2310221L/CO2_AssemblyISA/Assembler.h"
-#include "COA_2310221L/CO1_Architecture/CPU.h"
+#include "core/Arithmetic.h"
+#include "core/Assembler.h"
+#include "core/CPU.h"
 #include "PSOOP_2310261L/CO3_ProblemSolving/Compiler.h"
-#include "COA_2310221L/CO4_ControlUnitPipeline/ControlUnit.h"
+#include "core/ControlUnit.h"
 #include "PSOOP_2310261L/CO1_RealWorldOOP/English.h"
-#include "COA_2310221L/CO4_ControlUnitPipeline/Pipeline.h"
+#include "core/Pipeline.h"
 #include "PL_2310214L/CO4_SearchingSorting/Searching.h"
 #include "PL_2310214L/CO4_SearchingSorting/Sorting.h"
 

@@ -5,6 +5,8 @@
 //  natural structure - O(1) access, contiguous storage, fixed size.
 //  at() throws std::out_of_range on a bad index; operator[] is the
 //  fast path used inside the CPU.
+//  Member functions are defined in FixedArray.cpp (included at the end,
+//  because a template must be visible where it is used).
 // =====================================================================
 #pragma once
 #include <cstddef>
@@ -17,21 +19,14 @@ template <typename T, std::size_t N>
 class FixedArray {
 public:
     FixedArray() = default;
-    explicit FixedArray(const T& fill) { for (auto& e : data_) e = fill; }
+    explicit FixedArray(const T& fill);
 
     T& operator[](std::size_t i) { return data_[i]; }
     const T& operator[](std::size_t i) const { return data_[i]; }
+    T& at(std::size_t i);
+    const T& at(std::size_t i) const;
 
-    T& at(std::size_t i) {
-        if (i >= N) throw std::out_of_range("FixedArray index " + std::to_string(i) + " out of range");
-        return data_[i];
-    }
-    const T& at(std::size_t i) const {
-        if (i >= N) throw std::out_of_range("FixedArray index " + std::to_string(i) + " out of range");
-        return data_[i];
-    }
-
-    void fill(const T& v) { for (auto& e : data_) e = v; }
+    void fill(const T& v);
     static constexpr std::size_t size() { return N; }
 
     T* begin() { return data_; }
@@ -44,3 +39,5 @@ private:
 };
 
 } // namespace vas::ds
+
+#include "PL_2310214L/CO1_Arrays/FixedArray.cpp"

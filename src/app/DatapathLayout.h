@@ -3,7 +3,7 @@
 #pragma once
 #include <vector>
 
-#include "COA_2310221L/CO4_ControlUnitPipeline/ControlUnit.h"
+#include "core/ControlUnit.h"
 #include "CG_2310218L/CO2_Transformations/Math.h"
 
 namespace vas::ui::layout {

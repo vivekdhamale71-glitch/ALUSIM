@@ -1,7 +1,7 @@
 // Colour palette with a dark ("midnight") and a light ("daylight") theme.
 // Every view reads these variables, so switching is a single call to apply().
 #pragma once
-#include "COA_2310221L/CO4_ControlUnitPipeline/ControlUnit.h"
+#include "core/ControlUnit.h"
 #include "CG_2310218L/CO1_Primitives/Draw.h"
 #include "CG_2310218L/CO2_Transformations/Math.h"
 

@@ -398,8 +398,11 @@ void App::drawStatusBar(const Rect& r) {
     char b[200];
     const char* hm = sim_.hashMethod == ds::HashMethod::Linear ? "Linear probing"
                    : sim_.hashMethod == ds::HashMethod::Quadratic ? "Quadratic probing" : "Chaining";
-    std::snprintf(b, sizeof b, "cycle %ld    \xC2\xB7    instructions %ld    \xC2\xB7    %s CU    \xC2\xB7    symbols: %s    \xC2\xB7    Ctrl+S save  Ctrl+E export trace",
-                  core::Clock::instance().cycle(), sim_.cpu.steps(), sim_.cu->name().c_str(), hm);
+    // instructions = this run (undone by Step Back); executed = the static
+    // counter Instruction::executedCount, every execute() since the last reset
+    std::snprintf(b, sizeof b, "cycle %ld    \xC2\xB7    instructions %ld  (executed %ld)    \xC2\xB7    %s CU    \xC2\xB7    symbols: %s    \xC2\xB7    Ctrl+S save  Ctrl+E export trace",
+                  core::Clock::instance().cycle(), sim_.cpu.steps(), core::Instruction::executedCount,
+                  sim_.cu->name().c_str(), hm);
     D::textIn(Face::Regular, 12, r, b, theme::textMute, Align::Right, 16);
 }
 
