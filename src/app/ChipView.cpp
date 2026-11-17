@@ -14,6 +14,9 @@
 #include <cstdio>
 
 #include "CG_2310218L/CO1_Primitives/GL.h"
+#include "CG_2310218L/CO3_ObjectAlgorithms/Extrude.h"
+#include "CG_2310218L/CO6_TextureLightColor/Lighting.h"
+#include "CG_2310218L/CO6_TextureLightColor/Texture.h"
 #include "app/DatapathLayout.h"
 #include "app/Views.h"
 
@@ -53,51 +56,6 @@ Color unitColor(int u) {
     }
 }
 
-void material(const Color& c, const Color& emission, float shininess = 48) {
-    GLfloat amb[4] = {c.r * 0.45f, c.g * 0.45f, c.b * 0.45f, 1};
-    GLfloat dif[4] = {c.r, c.g, c.b, 1};
-    GLfloat spe[4] = {0.55f, 0.6f, 0.7f, 1};
-    GLfloat emi[4] = {emission.r, emission.g, emission.b, 1};
-    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, amb);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, dif);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, spe);
-    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, emi);
-    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shininess);
-}
-
-// extrude a 2D outline (in board coordinates) into a prism of height h
-void prism(const std::vector<Vec2>& poly, float h, Vec2 fanCenter) {
-    int n = int(poly.size());
-    // sides
-    glBegin(GL_QUADS);
-    for (int i = 0; i < n; ++i) {
-        Vec2 a = poly[i], b = poly[(i + 1) % n];
-        Vec2 e = b - a;
-        Vec2 nrm = Vec2(e.y, -e.x).normalized();
-        glNormal3f(nrm.x, 0, nrm.y);
-        glVertex3f(a.x, 0, a.y); glVertex3f(b.x, 0, b.y);
-        glVertex3f(b.x, h, b.y); glVertex3f(a.x, h, a.y);
-    }
-    glEnd();
-    // top (fan from a point that sees every vertex)
-    glBegin(GL_TRIANGLE_FAN);
-    glNormal3f(0, 1, 0);
-    glVertex3f(fanCenter.x, h, fanCenter.y);
-    for (int i = 0; i <= n; ++i) glVertex3f(poly[i % n].x, h, poly[i % n].y);
-    glEnd();
-}
-
-void box(float x0, float z0, float x1, float z1, float y0, float y1) {
-    std::vector<Vec2> p = {{x0, z0}, {x1, z0}, {x1, z1}, {x0, z1}};
-    glPushMatrix();
-    glTranslatef(0, y0, 0);
-    // winding: prism() expects counter-clockwise when seen from above (+y)
-    std::vector<Vec2> ccw = {{x0, z0}, {x0, z1}, {x1, z1}, {x1, z0}};
-    prism(ccw, y1 - y0, {(x0 + x1) / 2, (z0 + z1) / 2});
-    glPopMatrix();
-    (void)p;
-}
-
 // text lying flat on the XZ plane at height y
 void flatText(const std::string& s, float x, float y, float z, float scale, Face f, int px, const Color& c, bool centered) {
     Font& font = Fonts::get(f, px);
@@ -112,56 +70,7 @@ void flatText(const std::string& s, float x, float y, float z, float scale, Face
 
 } // namespace
 
-void ChipView::initTextures() {
-    // procedural PCB texture: grid, vias and copper traces              [CG CO6]
-    const int N = 512;
-    std::vector<unsigned char> px(std::size_t(N) * N * 4);
-    unsigned seed = 1234567;
-    auto rnd = [&]() { seed = seed * 1103515245u + 12345u; return (seed >> 16) & 0x7FFF; };
-    for (int y = 0; y < N; ++y)
-        for (int x = 0; x < N; ++x) {
-            unsigned char* p = &px[(std::size_t(y) * N + x) * 4];
-            float g = ((x % 32 == 0) || (y % 32 == 0)) ? 1.f : 0.f;
-            float noise = (rnd() % 100) / 100.f;
-            p[0] = (unsigned char)(10 + 6 * noise + 10 * g);
-            p[1] = (unsigned char)(20 + 8 * noise + 16 * g);
-            p[2] = (unsigned char)(38 + 10 * noise + 24 * g);
-            p[3] = 255;
-        }
-    auto plot = [&](int x, int y, int r, int g, int b) {
-        if (x < 0 || y < 0 || x >= N || y >= N) return;
-        unsigned char* p = &px[(std::size_t(y) * N + x) * 4];
-        p[0] = (unsigned char)r; p[1] = (unsigned char)g; p[2] = (unsigned char)b;
-    };
-    for (int t = 0; t < 70; ++t) {   // copper traces: manhattan segments
-        int x = rnd() % N, y = rnd() % N;
-        int len = 30 + rnd() % 120;
-        bool horiz = rnd() % 2;
-        for (int k = 0; k < len; ++k) {
-            for (int w = -1; w <= 1; ++w) {
-                if (horiz) plot(x + k, y + w, 32, 64, 92);
-                else plot(x + w, y + k, 32, 64, 92);
-            }
-        }
-        // via at the end
-        int ex = horiz ? x + len : x, ey = horiz ? y : y + len;
-        for (int dy = -4; dy <= 4; ++dy)
-            for (int dx = -4; dx <= 4; ++dx) {
-                int d2 = dx * dx + dy * dy;
-                if (d2 <= 16 && d2 >= 6) plot(ex + dx, ey + dy, 120, 150, 170);
-                else if (d2 < 6) plot(ex + dx, ey + dy, 6, 10, 20);
-            }
-    }
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, N, N, GL_RGBA, GL_UNSIGNED_BYTE, px.data());
-    boardTex_ = tex;
-}
+void ChipView::initTextures() { boardTex_ = makePcbTexture(); }   // CG CO6 Texture.cpp
 
 void ChipView::drawChip(const Rect& vp, Sim& sim, UI& ui) {
     if (!boardTex_) initTextures();
@@ -211,30 +120,9 @@ void ChipView::drawChip(const Rect& vp, Sim& sim, UI& ui) {
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_LIGHT1);
-    glEnable(GL_NORMALIZE);
-    glShadeModel(GL_SMOOTH);
-    GLfloat l0pos[4] = {-0.4f, 1.0f, 0.6f, 0};
-    GLfloat l0dif[4] = {0.9f, 0.92f, 1.0f, 1};
-    GLfloat l0amb[4] = {0.25f, 0.28f, 0.35f, 1};
-    glLightfv(GL_LIGHT0, GL_POSITION, l0pos);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, l0dif);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, l0dif);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, l0amb);
-    GLfloat l1pos[4] = {6, 5, -4, 1};
-    GLfloat l1dif[4] = {pcol.r * 0.6f, pcol.g * 0.6f, pcol.b * 0.6f, 1};
-    glLightfv(GL_LIGHT1, GL_POSITION, l1pos);
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, l1dif);
-    glLightfv(GL_LIGHT1, GL_SPECULAR, l1dif);
-    glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.004f);
-    if (flat_ < 0.02f) glEnable(GL_FOG);
-    GLfloat fogc[4] = {theme::light ? 0.88f : 0.03f, theme::light ? 0.91f : 0.05f, theme::light ? 0.97f : 0.1f, 1};
-    glFogi(GL_FOG_MODE, GL_LINEAR);
-    glFogfv(GL_FOG_COLOR, fogc);
-    glFogf(GL_FOG_START, dist_ * 0.9f);
-    glFogf(GL_FOG_END, dist_ * 2.6f);
+    chipLights(pcol);                                              // CG CO6 Lighting.cpp
+    Color fogc = theme::light ? Color(0.88f, 0.91f, 0.97f) : Color(0.03f, 0.05f, 0.1f);
+    depthFog(flat_ < 0.02f, fogc, dist_ * 0.9f, dist_ * 2.6f);
 
     // package + die (textured board)
     material(Color::hex(0x0E1526), Color(0, 0, 0));

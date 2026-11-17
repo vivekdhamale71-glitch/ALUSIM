@@ -1,5 +1,6 @@
 // =====================================================================
 //  2D math for the renderer                       [CG CO2, PSOOP]
+//  (animation helpers clampf / ease* / approach are used by every view)
 //  Vec2 / Color with overloaded operators and a 3x3 homogeneous
 //  matrix used for the datapath pan / zoom (translate + scale) and to
 //  map world coordinates to screen space before clipping.
@@ -66,35 +67,20 @@ struct Color {
     }
 };
 
-// 3x3 matrix for 2D homogeneous transforms (row-major)
+// 3x3 matrix for 2D homogeneous transforms (row-major)      [CG CO2]
+//   | m0 m1 m2 |   | x |      translate: m2, m5      scale: m0, m4
+//   | m3 m4 m5 | * | y |      rotate:    m0 m1 / m3 m4 = cos -sin / sin cos
+//   |  0  0  1 |   | 1 |
+// Bodies are in Math.cpp.
 struct Mat3 {
     float m[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-    static Mat3 translate(float tx, float ty) { Mat3 r; r.m[2] = tx; r.m[5] = ty; return r; }
-    static Mat3 scale(float sx, float sy) { Mat3 r; r.m[0] = sx; r.m[4] = sy; return r; }
-    static Mat3 rotate(float rad) {
-        Mat3 r;
-        float c = std::cos(rad), s = std::sin(rad);
-        r.m[0] = c; r.m[1] = -s; r.m[3] = s; r.m[4] = c;
-        return r;
-    }
-    Mat3 operator*(const Mat3& o) const {
-        Mat3 r;
-        for (int i = 0; i < 3; ++i)
-            for (int j = 0; j < 3; ++j)
-                r.m[i * 3 + j] = m[i * 3] * o.m[j] + m[i * 3 + 1] * o.m[3 + j] + m[i * 3 + 2] * o.m[6 + j];
-        return r;
-    }
-    Vec2 apply(Vec2 p) const { return {m[0] * p.x + m[1] * p.y + m[2], m[3] * p.x + m[4] * p.y + m[5]}; }
-    float scaleX() const { return std::sqrt(m[0] * m[0] + m[3] * m[3]); }
-    Mat3 inverseAffine() const {
-        float det = m[0] * m[4] - m[1] * m[3];
-        Mat3 r;
-        r.m[0] = m[4] / det; r.m[1] = -m[1] / det;
-        r.m[3] = -m[3] / det; r.m[4] = m[0] / det;
-        r.m[2] = -(r.m[0] * m[2] + r.m[1] * m[5]);
-        r.m[5] = -(r.m[3] * m[2] + r.m[4] * m[5]);
-        return r;
-    }
+    static Mat3 translate(float tx, float ty);
+    static Mat3 scale(float sx, float sy);
+    static Mat3 rotate(float rad);
+    Mat3 operator*(const Mat3& o) const;      // composition: (A * B) applies B first
+    Vec2 apply(Vec2 p) const;                  // transform a point
+    float scaleX() const;                      // current zoom factor
+    Mat3 inverseAffine() const;                // screen -> world (for the mouse)
 };
 
 inline float clampf(float v, float a, float b) { return v < a ? a : (v > b ? b : v); }

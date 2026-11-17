@@ -11,12 +11,13 @@ Team: Vivek Dhamale · Pranjal Bhandari · Sanika Patil · Mrudula Bongulwar
 ## Run it
 
 ```bash
-sudo apt install g++ freeglut3-dev libglu1-mesa-dev   # once
-./build.sh run                                        # build + start
-./build.sh test                                       # 110 unit tests for the core
+sudo apt install g++ nasm freeglut3-dev libglu1-mesa-dev   # once
+./build.sh run                                             # build + start the simulator
+./build.sh test                                            # 110 unit tests for the core
+python3 docs/make_co_pdfs.py                               # rebuild the CO explanation PDFs (needs Chrome)
 ```
 
-There is also a `Makefile` (`make run`, `make test`). On Windows (MSYS2 MinGW64), install `mingw-w64-x86_64-freeglut` and run `make OS=Windows_NT`.
+There is also a `Makefile` (`make run`, `make test`). On Windows (MSYS2 MinGW64), install `mingw-w64-x86_64-freeglut` and `mingw-w64-x86_64-nasm` and run `make OS=Windows_NT`.
 
 ## Controls
 
@@ -55,82 +56,80 @@ Every screen works in a **dark** and a **light** theme. 3D is used where depth a
 
 ## How every Course Outcome is used
 
-### PL (2310214L): Data Structures
+Every CO folder holds code that the simulator actually runs, plus a README and an explanation PDF (statement, where it shows in the app, files and functions, how it works, worked example, viva questions).
 
-| CO | Where it is used | Files |
+### PL (2310214L): Data Structures — C++
+
+| CO | What it does in the simulator | Folder |
 |---|---|---|
-| **CO1** Arrays | Register file `Register64[16]`, opcode table, waveform columns, bucket arrays of the hash tables | `COA_2310221L/CO1_Architecture/CPU.h`, `PL_2310214L/CO5_Hashing/HashTable.h` |
-| **CO2** Linked lists | **Singly**: the lexer's token stream. **Doubly**: the execution timeline of CPU snapshots, used by Step Back. **Circular**: the FETCH→DECODE→EXECUTE→MEM→WB instruction cycle. Separate chaining also uses linked nodes. | `PL_2310214L/CO2_LinkedLists/LinkedList.h`, `PSOOP_2310261L/CO3_ProblemSolving/Compiler.cpp`, `app/Sim.h` |
-| **CO3** Stack & queue | Shunting-yard operator **stack** and output **queue**, register-allocation stack, code-gen value stack, PUSH/POP/CALL/RET on the CPU stack, and a circular queue as the waveform's rolling buffer | `PL_2310214L/CO3_StackQueue/Stack.h`, `PL_2310214L/CO3_StackQueue/Queue.h`, `PSOOP_2310261L/CO3_ProblemSolving/Compiler.cpp` |
-| **CO4** Searching & sorting | **Binary search** for keywords and for mnemonics in the opcode table, which is **quick-sorted** at start-up. The Data Lab runs Bubble, Insertion and Quick sort on the profiler data, and Linear, Binary and Fibonacci search on memory. | `PL_2310214L/CO4_SearchingSorting/Sorting.h`, `PL_2310214L/CO4_SearchingSorting/Searching.h`, `COA_2310221L/CO2_AssemblyISA/Instruction.cpp` |
-| **CO5** Hashing | Variable symbol table and assembler label table (linear, quadratic or chaining, chosen by the user), `HashMap<K,V>` for opcode dispatch, register names, sparse memory, the micro-code dispatch ROM and the translation cache | `PL_2310214L/CO5_Hashing/HashTable.h`, `PL_2310214L/CO5_Hashing/HashMap.h` |
+| **CO1** | The CPU's register file is an array: 16 registers addressed by number, so reading or writing RAX, RBX ... R15 is one O(1) index operation. | [`CO1_Arrays`](src/PL_2310214L/CO1_Arrays/) · [PDF](src/PL_2310214L/CO1_Arrays/CO1_Explanation.pdf) |
+| **CO2** | Three different linked lists, each picked for its shape: singly for the lexer's token stream, doubly for the Step Back history, circular for the FETCH-DECODE-EXECUTE-MEMORY-WRITEBACK cycle. | [`CO2_LinkedLists`](src/PL_2310214L/CO2_LinkedLists/) · [PDF](src/PL_2310214L/CO2_LinkedLists/CO2_Explanation.pdf) |
+| **CO3** | The compiler turns infix expressions into postfix with the shunting-yard algorithm, which needs an operator stack and an output queue; code generation then uses a value stack and a stack of free registers. The waveform is a circular queue. | [`CO3_StackQueue`](src/PL_2310214L/CO3_StackQueue/) · [PDF](src/PL_2310214L/CO3_StackQueue/CO3_Explanation.pdf) |
+| **CO4** | The assembler sorts its opcode table once with quick sort and then finds every mnemonic with binary search; the lexer finds keywords the same way. The Data Lab animates bubble, insertion and quick sort on the profiler's instruction counts, and linear, binary and Fibonacci search on data memory. | [`CO4_SearchingSorting`](src/PL_2310214L/CO4_SearchingSorting/) · [PDF](src/PL_2310214L/CO4_SearchingSorting/CO4_Explanation.pdf) |
+| **CO5** | Variable names (compiler symbol table) and labels (assembler) are stored in a hash table whose collision strategy the user chooses: linear probing, quadratic probing or separate chaining. A generic chained HashMap provides O(1) lookups everywhere else. | [`CO5_Hashing`](src/PL_2310214L/CO5_Hashing/) · [PDF](src/PL_2310214L/CO5_Hashing/CO5_Explanation.pdf) |
 
-### COAL (2310221L): Computer Organization & Architecture
+### COA (2310221L): Computer Organization & Architecture — NASM x86-64 assembly
 
-| CO | Where it is used | Files |
+| CO | What it does in the simulator | Folder |
 |---|---|---|
-| **CO1** Architecture & instruction set | 16 × 64-bit registers with **RAX ⊃ EAX ⊃ AX ⊃ AH/AL** sub-register views (8086 → 80386 → x86-64), RIP, RFLAGS (CF ZF SF OF), memory map and stack | `COA_2310221L/CO1_Architecture/Register64.h`, `COA_2310221L/CO1_Architecture/CPU.cpp`, register panel |
-| **CO2** Assembly programs | 33 real x86 instructions (MOV, ADD, SUB, IMUL, IDIV, CQO, logic, shifts, CMP, Jcc, CALL/RET, PUSH/POP…), a two-pass assembler, and programs written by hand or generated by the compiler | `COA_2310221L/CO2_AssemblyISA/Assembler.cpp`, `COA_2310221L/CO2_AssemblyISA/Instruction.cpp` |
-| **CO3** Computer arithmetic | Booth's algorithm, add-and-shift, restoring division and BCD conversion, step by step. The ALU computes CF, ZF, SF and OF exactly as x86 does. | `COA_2310221L/CO3_ComputerArithmetic/Arithmetic.cpp`, `COA_2310221L/CO1_Architecture/Register64.h` |
-| **CO4** Control signals & pipelining | **Hardwired** (decoder table) vs **Microprogrammed** (41-word control store, micro-PC, dispatch ROM) control units, an 11-signal control vector per cycle, a waveform, and a **5-stage pipeline** with data, control and structural hazards, forwarding, CPI and speed-up | `COA_2310221L/CO4_ControlUnitPipeline/ControlUnit.cpp`, `COA_2310221L/CO4_ControlUnitPipeline/Pipeline.cpp` |
+| **CO1** | The simulator's ALU is written in x86-64 assembly and runs on the real processor's ALU: the simulated flags are loaded into RFLAGS, the real ADD / SUB / IMUL / AND / SHL ... runs, and the processor's own CF ZF SF OF are read back. | [`CO1_Architecture`](src/COA_2310221L/CO1_Architecture/) · [PDF](src/COA_2310221L/CO1_Architecture/CO1_Explanation.pdf) |
+| **CO2** | Programs written in assembly (or generated by the compiler) are assembled by a two-pass assembler and run on the simulated CPU. The instruction semantics that depend on processor details are themselves assembly: branch conditions use the real SETcc, IDIV the real IDIV, CQO the real CQO. | [`CO2_AssemblyISA`](src/COA_2310221L/CO2_AssemblyISA/) · [PDF](src/COA_2310221L/CO2_AssemblyISA/CO2_Explanation.pdf) |
+| **CO3** | Booth's multiplication, add-and-shift multiplication, restoring division and binary / BCD conversion are written in assembly on n-bit registers. Each records every step (A, Q, Q-1 or C, operation) into an array that the Arithmetic screen animates bit by bit. | [`CO3_ComputerArithmetic`](src/COA_2310221L/CO3_ComputerArithmetic/) · [PDF](src/COA_2310221L/CO3_ComputerArithmetic/CO3_Explanation.pdf) |
+| **CO4** | The hardwired control unit's decoder ROM is in assembly: one 32-bit word per instruction form holding the 11 control signals and the ALU operation. The 5-stage pipeline's timing rules (operand readiness with and without forwarding, and stage scheduling with stalls) are also assembly functions. | [`CO4_ControlUnitPipeline`](src/COA_2310221L/CO4_ControlUnitPipeline/) · [PDF](src/COA_2310221L/CO4_ControlUnitPipeline/CO4_Explanation.pdf) |
 
-### CGL (2310218L): Computer Graphics (OpenGL)
+### CG (2310218L): Computer Graphics — C++ / OpenGL
 
-Every technique has a job in the interface. None of them is a separate demo.
-
-| CO | Where it is used | Files |
+| CO | What it does in the simulator | Folder |
 |---|---|---|
-| **CO1** OpenGL primitives | The whole UI (cards, buttons, wires, waveform, glyphs) is built from `GL_TRIANGLE_FAN`, `GL_TRIANGLE_STRIP`, `GL_QUADS`, `GL_POINTS` and `GL_LINES` | `CG_2310218L/CO1_Primitives/Draw.cpp` |
-| **CO2** Transformations | `Mat3` translate and scale for datapath pan and zoom (zoom about the cursor), translation of packets, tokens, swapped bars and shifting bits, and rotation of the 3D camera | `CG_2310218L/CO2_Transformations/Math.h`, `app/DatapathView.cpp` |
-| **CO3** 2D & 3D object algorithms | **Bresenham** draws the active wires as flowing signal dots, the **midpoint circle** draws the flag LEDs, the **scanline fill** fills the concave ALU and MUX symbols, and 2D outlines are **extruded** into 3D prisms | `CG_2310218L/CO3_ObjectAlgorithms/Raster.cpp`, `app/ChipView.cpp` |
-| **CO4** Projection & viewing | Animated 3D → 2D switch: a dolly zoom flattens `gluPerspective` into `glOrtho` for a top view of the chip. Orbit camera with `gluLookAt`. | `app/ParseTree.cpp`, `app/ChipView.cpp` |
-| **CO5** Clipping | **Cohen–Sutherland** clips datapath wires when you zoom or pan. **Liang–Barsky** clips the scrolling waveform traces. | `CG_2310218L/CO5_Clipping/Clip.cpp` |
-| **CO6** Texture, light, colour | TrueType glyph atlas texture, a procedurally generated PCB texture with mipmaps, two lights with specular highlights, emissive glow on the active unit, fog, and phase colour-coding | `CG_2310218L/CO6_TextureLightColor/Font.cpp`, `app/ChipView.cpp` |
+| **CO1** | The whole user interface (cards, buttons, wires, waveform, LEDs, text) is drawn with OpenGL primitives; no UI library is used. | [`CO1_Primitives`](src/CG_2310218L/CO1_Primitives/) · [PDF](src/CG_2310218L/CO1_Primitives/CO1_Explanation.pdf) |
+| **CO2** | The datapath diagram can be zoomed and panned in real time. Its view is a 3 × 3 homogeneous matrix M = T(centre + pan) · S(zoom) · T(-world centre); its inverse maps the mouse back so the zoom stays under the cursor. The 3D views use the OpenGL matrix stack (glTranslatef, glRotatef, glScalef). | [`CO2_Transformations`](src/CG_2310218L/CO2_Transformations/) · [PDF](src/CG_2310218L/CO2_Transformations/CO2_Explanation.pdf) |
+| **CO3** | Bresenham's line algorithm turns active wires into flowing signal dots, the midpoint circle algorithm draws the flag LEDs and wire junctions, the scan-line algorithm fills the ALU and multiplexer symbols, and extrusion turns the same 2D outlines into the 3D chip. | [`CO3_ObjectAlgorithms`](src/CG_2310218L/CO3_ObjectAlgorithms/) · [PDF](src/CG_2310218L/CO3_ObjectAlgorithms/CO3_Explanation.pdf) |
+| **CO4** | Every 3D view sets up a perspective camera with gluPerspective and gluLookAt. The 3D chip has an orbit camera and an animated 3D ↔ 2D switch: a dolly zoom narrows the field of view while the eye backs away until the projection becomes parallel (glOrtho top view). gluProject maps 3D points back to the screen for crisp labels. | [`CO4_ProjectionViewing`](src/CG_2310218L/CO4_ProjectionViewing/) · [PDF](src/CG_2310218L/CO4_ProjectionViewing/CO4_Explanation.pdf) |
+| **CO5** | When the datapath is zoomed or panned, every wire is clipped to the diagram's viewport with Cohen-Sutherland; the scrolling waveform traces are clipped to the plot window with Liang-Barsky. | [`CO5_Clipping`](src/CG_2310218L/CO5_Clipping/) · [PDF](src/CG_2310218L/CO5_Clipping/CO5_Explanation.pdf) |
+| **CO6** | All text is a TrueType glyph atlas texture; the 3D chip's board is a procedurally generated circuit texture with mipmaps; the chip is lit by two lights (one tinted with the current pipeline phase colour) with specular highlights, emissive glow on the active unit, and depth fog. | [`CO6_TextureLightColor`](src/CG_2310218L/CO6_TextureLightColor/) · [PDF](src/CG_2310218L/CO6_TextureLightColor/CO6_Explanation.pdf) |
 
-### PSOOP (2310261L): Problem Solving with OOP (C++)
+### PSOOP (2310261L): Problem Solving with OOP — C++
 
-| CO | Where it is used |
-|---|---|
-| **CO1** OOP for real problems | The CPU, ALU, Register64, Compiler, Assembler, ControlUnit, Pipeline and each View are classes that model real hardware and software parts. |
-| **CO2** Reducing complexity | Abstract `Instruction` with 6 derived classes (the CPU only calls `execute()`), abstract `ControlUnit`, `HashTable`, `Sorter`, `Searcher` and `View`, templates (`Stack<T>`, `CircularQueue<T>`, `HashMap<K,V>`, `quickSort`, `binarySearch`), and namespaces |
-| **CO3** Critical thinking & programming | The English → code translator (a recursive-descent parser over words), the C++ front end (declarations, compound operators, for-loops), an exception hierarchy (`SyntaxError`, `DivideByZeroError`, `MemoryAccessError`, `StackOverflowError`…), operator overloading (`Register64`, `Vec2`, `Mat3`, `Flags`), and rule-of-five containers |
-| **CO4** Logic building | Design patterns: **Factory** (instructions from a mnemonic), **Observer** (Profiler watching the CPU), **Singleton** (Clock), **Strategy** (control units, hash and sort methods), **Command and undo** (Step Back), plus a **friend** class (Debugger) and a static member (instruction counter). File handling for save, load and trace export. |
-
----
+| CO | What it does in the simulator | Folder |
+|---|---|---|
+| **CO1** | The simulator models a real computer as classes (CPU, ALU, Register64, Assembler, Compiler, ControlUnit, Pipeline) and solves a real problem for beginners: understanding code written in plain English. The EnglishTranslator turns sentences like “add 12 and 3” into program statements. | [`CO1_RealWorldOOP`](src/PSOOP_2310261L/CO1_RealWorldOOP/) · [PDF](src/PSOOP_2310261L/CO1_RealWorldOOP/CO1_Explanation.pdf) |
+| **CO2** | Complexity is reduced with abstraction and inheritance: the CPU only calls execute() on an abstract Instruction; control units, hash tables, sorters and screens are abstract base classes with interchangeable subclasses; containers are templates; and every error is one typed exception hierarchy caught in one place. | [`CO2_ReduceComplexity`](src/PSOOP_2310261L/CO2_ReduceComplexity/) · [PDF](src/PSOOP_2310261L/CO2_ReduceComplexity/CO2_Explanation.pdf) |
+| **CO3** | The central problem of the project: compile statements and simple C++ into x86-64 assembly. The compiler splits it into three stages (lexer, shunting-yard parser, code generator), each recorded so the screen can animate it. | [`CO3_ProblemSolving`](src/PSOOP_2310261L/CO3_ProblemSolving/) · [PDF](src/PSOOP_2310261L/CO3_ProblemSolving/CO3_Explanation.pdf) |
+| **CO4** | Design patterns solve recurring problems in the simulator: a Factory creates instructions from mnemonics, an Observer profiles execution, a Singleton holds the clock, Strategies make the control unit, hash method and sort interchangeable, and Command / undo powers Step Back. A friend class and a static member complete the set. | [`CO4_LogicBuilding`](src/PSOOP_2310261L/CO4_LogicBuilding/) · [PDF](src/PSOOP_2310261L/CO4_LogicBuilding/CO4_Explanation.pdf) |
 
 ## Project structure — organised by subject and course outcome
 
-Every subject has its own folder and every CO has its own sub-folder with a README
-(official CO statement, the code in it, where it shows up in the app).
-
 ```
 src/
-├── PL_2310214L/                 Programming Lab — Data Structures
-│   ├── CO1_Arrays/              FixedArray<T,N>  (CPU register file)
-│   ├── CO2_LinkedLists/         singly / doubly / circular linked lists
-│   ├── CO3_StackQueue/          Stack<T>, CircularQueue<T>
-│   ├── CO4_SearchingSorting/    bubble / insertion / quick sort, linear / binary / Fibonacci search
-│   └── CO5_Hashing/             linear & quadratic probing, chaining, HashMap<K,V>
-├── COA_2310221L/                Computer Organization & Architecture
-│   ├── CO1_Architecture/        Register64 + ALU + flags, CPU
-│   ├── CO2_AssemblyISA/         33-instruction x86 ISA, two-pass assembler
-│   ├── CO3_ComputerArithmetic/  Booth, add-and-shift, restoring division, BCD
-│   └── CO4_ControlUnitPipeline/ hardwired & microprogrammed control unit, 5-stage pipeline
-├── CG_2310218L/                 Computer Graphics (OpenGL)
-│   ├── CO1_Primitives/          OpenGL drawing layer
-│   ├── CO2_Transformations/     Vec2, Mat3 (translate / scale / rotate)
-│   ├── CO3_ObjectAlgorithms/    Bresenham, midpoint circle, scanline fill
-│   ├── CO4_ProjectionViewing/   3D scenes: perspective camera, gluProject
-│   ├── CO5_Clipping/            Cohen–Sutherland, Liang–Barsky
-│   └── CO6_TextureLightColor/   TrueType texture atlas (+ lighting / fog in the 3D chip)
-├── PSOOP_2310261L/              Problem Solving using OOP
-│   ├── CO1_RealWorldOOP/        English → code translator
-│   ├── CO2_ReduceComplexity/    exception hierarchy
-│   ├── CO3_ProblemSolving/      C++ / statement → x86-64 compiler
-│   └── CO4_LogicBuilding/       Observer, Singleton, friend Debugger
+├── PL_2310214L/                 Data structures (C++)
+│   ├── CO1_Arrays/              FixedArray<T,N>                     -> CPU register file
+│   ├── CO2_LinkedLists/         Singly / Doubly / CircularLinkedList -> tokens, Step Back, phase ring
+│   ├── CO3_StackQueue/          Stack<T>, CircularQueue<T>          -> shunting-yard, code gen, waveform
+│   ├── CO4_SearchingSorting/    Sorting, Searching, TableSort, TableSearch -> Data Lab, opcode table
+│   └── CO5_Hashing/             HashTable, OpenAddressing, Chaining, HashMap -> symbol / label tables
+├── COA_2310221L/                Computer organization (NASM x86-64, linked into the app)
+│   ├── CO1_Architecture/        alu.asm            the ALU on the real x86 ALU + RFLAGS
+│   ├── CO2_AssemblyISA/         isa.asm            Jcc conditions (SETcc), IDIV, CQO
+│   ├── CO3_ComputerArithmetic/  arithmetic.asm     Booth, add-and-shift, restoring division, BCD
+│   ├── CO4_ControlUnitPipeline/ control_unit.asm   decoder ROM, operand readiness, pipeline schedule
+│   ├── coa_asm.h                C++ declarations of the assembly functions
+│   └── abi.inc                  Linux / Windows calling conventions
+├── CG_2310218L/                 Computer graphics (C++ / OpenGL)
+│   ├── CO1_Primitives/          Draw               every UI shape from GL primitives
+│   ├── CO2_Transformations/     Math               Mat3 translate / scale / rotate, pan & zoom
+│   ├── CO3_ObjectAlgorithms/    Raster, Extrude    Bresenham, midpoint circle, scan-line, 2D -> 3D
+│   ├── CO4_ProjectionViewing/   Scene3D, Camera    gluPerspective / glOrtho, gluLookAt, dolly zoom
+│   ├── CO5_Clipping/            Clip               Cohen–Sutherland, Liang–Barsky
+│   └── CO6_TextureLightColor/   Font, Texture, Lighting  glyph atlas, PCB texture + mipmaps, lights, fog
+├── PSOOP_2310261L/              Object-oriented core (C++)
+│   ├── CO1_RealWorldOOP/        English            English -> statements translator
+│   ├── CO2_ReduceComplexity/    Errors             exception hierarchy
+│   ├── CO3_ProblemSolving/      Compiler           lexer, shunting-yard, code generator
+│   └── CO4_LogicBuilding/       Debugger, Profiler, Clock   friend, Observer, Singleton
+├── core/                        the CPU model: Register64, CPU, instructions, assembler, control unit, pipeline
 └── app/                         window, simulation controller, widgets, the six screens
 tests/       console unit tests (110 checks)
+docs/        make_co_pdfs.py  -> the CO explanation PDFs
 assets/      fonts (Lato, Noto Sans Mono, DejaVu Sans)
 third_party/ stb_truetype.h
 ```
-# virtualalu

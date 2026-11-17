@@ -456,7 +456,10 @@ void DatapathView::drawInfo(const Rect& area, Sim& sim, UI& ui) {
                 theme::textMute);
         // phase timeline
         float y = c.y + 48;
-        const Phase phases[5] = {Phase::Fetch, Phase::Decode, Phase::Execute, Phase::Memory, Phase::WriteBack};
+        // the five phases come from walking the circular list once round  [PL CO2]
+        Phase phases[5];
+        auto* node = sim.phaseRing.head();
+        for (int i = 0; i < 5; ++i, node = node->next) phases[i] = node->value;
         const char* short_[5] = {"IF", "ID", "EX", "MEM", "WB"};
         float pw = (c.w - 4 * 6) / 5;
         for (int i = 0; i < 5; ++i) {
@@ -504,7 +507,12 @@ void DatapathView::drawInfo(const Rect& area, Sim& sim, UI& ui) {
     }
 
     // control signals
-    Rect sc = ui.card(sig, "CONTROL SIGNALS", theme::violet, ms ? phaseName(ms->phase) : "");
+    std::string phaseTag;
+    if (ms) {   // the next phase is the next node of the circular list   [PL CO2]
+        auto* node = sim.phaseRing.find(ms->phase);
+        phaseTag = std::string(phaseName(ms->phase)) + (node ? std::string("  \xE2\x86\x92  ") + phaseName(node->next->value) : "");
+    }
+    Rect sc = ui.card(sig, "CONTROL SIGNALS", theme::violet, phaseTag);
     float x = sc.x, y = sc.y;
     ControlSignals cs = (ms && sim.animating()) ? ms->sig : ControlSignals{};
     for (int i = 0; i < ControlSignals::kCount; ++i) {

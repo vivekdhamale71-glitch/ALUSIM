@@ -1,9 +1,20 @@
-# 2310214L.CO1 — Develop applications using arrays  [L3]
+# 2310214L.CO1 — Develop applications using arrays.
 
-**File:** `FixedArray.h` — `FixedArray<T, N>`: fixed-size array with O(1) indexed access and bounds-checked `at()`.
+The CPU's register file is an array: 16 registers addressed by number, so reading or writing RAX, RBX ... R15 is one O(1) index operation.
 
-**Used for:** the CPU register file — `FixedArray<Register64, 16>` in `COA_2310221L/CO1_Architecture/CPU.h`.
-Registers are addressed by number (RAX = 0 … R15 = 15), so an array is the natural structure.
-Arrays also hold the sorted opcode table, the open-addressing hash-table slots and the waveform columns.
+## Where you see it in the simulator
 
-**See it in the app:** the Registers panel on the right of every screen.
+- Registers panel (right side of every screen): the 16 rows are the 16 array elements.
+- Every instruction that reads or writes a register goes through this array.
+
+## Files and functions
+
+Paths are relative to `src/PL_2310214L/` unless they start with another top-level folder.
+
+| File | Functions / classes | Role |
+|---|---|---|
+| CO1_Arrays/FixedArray.h | class `FixedArray` | the array type: size fixed at compile time |
+| CO1_Arrays/FixedArray.cpp | `at()`, `fill()`, constructor | bounds-checked access and traversal |
+| core/CPU.h | `FixedArray regs_` | the register file of the simulated CPU |
+
+**Full explanation, worked example and viva questions:** [CO1_Explanation.pdf](CO1_Explanation.pdf)

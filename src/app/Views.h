@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "COA_2310221L/CO3_ComputerArithmetic/Arithmetic.h"
+#include "core/Arithmetic.h"
 #include "PL_2310214L/CO5_Hashing/HashTable.h"
 #include "PL_2310214L/CO4_SearchingSorting/Searching.h"
 #include "PL_2310214L/CO4_SearchingSorting/Sorting.h"
