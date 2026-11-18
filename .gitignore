@@ -16,3 +16,6 @@ obj/
 
 # Python
 __pycache__/
+
+# per-user preferences written by the app
+settings.cfg

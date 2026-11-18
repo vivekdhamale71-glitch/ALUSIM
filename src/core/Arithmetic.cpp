@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <sstream>
 
-#include "COA_2310221L/coa_asm.h"
+#include "engine/asm/coa_asm.h"
 
 namespace vas::core {
 
@@ -19,7 +19,7 @@ static std::int64_t signExtend(std::uint64_t v, int bits) {
     return std::int64_t((v ^ m) - m);
 }
 
-// The algorithms run in COA_2310221L/CO3_ComputerArithmetic/arithmetic.asm and
+// The algorithms run in engine/asm/CO3_ComputerArithmetic/arithmetic.asm and
 // leave one ArithStepRec per step; this file only turns them into text.
 static std::vector<ArithStepRec> records(std::size_t n) { return std::vector<ArithStepRec>(1 + 3 * n); }
 

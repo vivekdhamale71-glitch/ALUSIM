@@ -3,10 +3,11 @@
 //  An abstract Instruction with one derived class per instruction
 //  group. The CPU only ever calls the virtual interface, so adding an
 //  instruction never touches the CPU.            [PSOOP: polymorphism]
-//  InstructionFactory builds instructions from a mnemonic through a
-//  HashMap of creators                             [PSOOP + PL CO5]
-//  OpcodeTable is sorted once with quickSort and searched with binary
-//  search by the assembler                                  [PL CO4]
+//  OpcodeTable is sorted once with quickSort; every mnemonic is then
+//  found with binary search, and the entry it finds carries the
+//  creator that InstructionFactory calls                    [PL CO4]
+//  InstructionFactory: mnemonic -> the right Instruction subclass
+//                                                    [PSOOP CO4 Factory]
 // =====================================================================
 #pragma once
 #include <cstdint>
@@ -14,8 +15,8 @@
 #include <string>
 #include <vector>
 
-#include "PL_2310214L/CO5_Hashing/HashMap.h"
-#include "PL_2310214L/CO5_Hashing/HashTable.h"
+#include "engine/ds/HashMap.h"
+#include "engine/ds/HashTable.h"
 #include "core/Register64.h"
 
 namespace vas::core {
@@ -39,6 +40,7 @@ struct Operand {
 };
 
 enum class InstrClass { DataTransfer, Arithmetic, Logic, ControlFlow, Stack, System };
+constexpr int kInstrClassCount = 6;
 const char* instrClassName(InstrClass c);
 
 // The control-signal vector produced by the control unit.  [COA CO4]
@@ -128,7 +130,11 @@ public:
     int line() const { return line_; }
     const std::string& text() const { return text_; }
 
-    static long executedCount;   // total instructions executed (static member)
+    // static members: one copy shared by every instruction object  [PSOOP CO4]
+    static long executedCount;                       // all executions since reset
+    static long classCount[kInstrClassCount];        // executions per class (instruction mix)
+    static void countExecution(InstrClass c);
+    static void resetCounts();
 
 protected:
     std::string mnem_;
@@ -197,12 +203,16 @@ public:
 };
 
 // ------------------------------------------------------------ opcode table
+using InstrCreator = std::unique_ptr<Instruction> (*)(const std::string&, std::vector<Operand>, int,
+                                                     const std::string&);
+
 struct OpcodeInfo {
     std::string mnemonic;
     InstrClass klass;
     int minOps, maxOps;
     std::string encoding;      // x86 primary opcode, for display
     std::string description;
+    InstrCreator create = nullptr;   // builds the subclass for this mnemonic
 };
 
 class OpcodeTable {
@@ -220,14 +230,16 @@ private:
 // ----------------------------------------------------------------- factory
 class InstructionFactory {
 public:
-    using Creator = std::unique_ptr<Instruction> (*)(const std::string&, std::vector<Operand>, int, const std::string&);
     static const InstructionFactory& instance();
+    // from an entry already found by binary search (the assembler's path)
+    std::unique_ptr<Instruction> create(const OpcodeInfo& info, std::vector<Operand> ops, int line,
+                                        const std::string& text) const;
+    // looks the mnemonic up first (binary search in OpcodeTable)
     std::unique_ptr<Instruction> create(const std::string& mnem, std::vector<Operand> ops, int line,
                                         const std::string& text) const;
 
 private:
-    InstructionFactory();
-    ds::HashMap<std::string, Creator> creators_;
+    InstructionFactory() = default;
 };
 
 // ----------------------------------------------------------------- program

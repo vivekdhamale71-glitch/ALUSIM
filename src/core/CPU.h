@@ -10,15 +10,15 @@
 #include <string>
 #include <vector>
 
-#include "PL_2310214L/CO1_Arrays/FixedArray.h"
-#include "PL_2310214L/CO5_Hashing/HashMap.h"
-#include "PSOOP_2310261L/CO2_ReduceComplexity/Errors.h"
+#include "engine/ds/FixedArray.h"
+#include "engine/ds/HashMap.h"
+#include "engine/lang/Errors.h"
 #include "core/Instruction.h"
 #include "core/Register64.h"
 
 namespace vas::core {
 
-class CPUObserver;   // Observer interface: PSOOP_2310261L/CO4_LogicBuilding/Profiler.h
+class CPUObserver;   // Observer interface: engine/lang/Profiler.h
 
 using Memory = ds::HashMap<std::uint64_t, std::int64_t>;   // sparse qword memory
 
@@ -96,4 +96,4 @@ private:
 } // namespace vas::core
 
 // Debugger (friend), Profiler (Observer) and Clock (Singleton)    [PSOOP CO4]
-#include "PSOOP_2310261L/CO4_LogicBuilding/Patterns.h"
+#include "engine/lang/Patterns.h"

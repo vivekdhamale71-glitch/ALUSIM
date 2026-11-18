@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstdio>
 
-#include "PSOOP_2310261L/CO3_ProblemSolving/Compiler.h"
+#include "engine/lang/Compiler.h"
 #include "app/Samples.h"
 #include "app/Views.h"
 
@@ -161,19 +161,25 @@ void CompileView::draw(const Rect& area, Sim& sim, UI& ui) {
         for (int i = 0; i < int(s.size()); ++i)
             if (s[i].mode == mode) { sim.loadSample(i); break; }
         sim.compile();
+        return;   // compiling replaced the timeline: nEv above is stale, so redraw next frame
     }
     Rect compileBtn(tb.r() - 150, tb.y, 150, 34);
-    if (ui.button("compile", compileBtn, "Compile & Load", Style::Primary, int(Icon::Bolt))) sim.compile();
+    if (ui.button("compile", compileBtn, "Compile & Load", Style::Primary, int(Icon::Bolt))) {
+        sim.compile();
+        return;   // (a failed compile leaves an empty timeline; see above)
+    }
     if (ui.hovered(compileBtn)) ui.tooltip("Ctrl+Enter");
     D::roundRect(sampleR, 9, theme::bg1);
     D::roundRectOutline(sampleR, 9, theme::border);
     if (ui.iconButton("prevSample", Rect(sampleR.x + 2, sampleR.y + 2, 28, 28), Icon::ChevronL, "Previous example")) {
         sim.loadSample(sim.sampleIndex - 1);
         sim.compile();
+        return;
     }
     if (ui.iconButton("nextSample", Rect(sampleR.r() - 30, sampleR.y + 2, 28, 28), Icon::ChevronR, "Next example")) {
         sim.loadSample(sim.sampleIndex + 1);
         sim.compile();
+        return;
     }
     {
         std::string label = "Example " + std::to_string(sim.sampleIndex + 1) + "/" + std::to_string(samples().size()) +
@@ -463,6 +469,7 @@ void CompileView::draw(const Rect& area, Sim& sim, UI& ui) {
     if (nh != hm) {
         sim.hashMethod = ds::HashMethod(nh);
         sim.compile();
+        return;
     }
 }
 

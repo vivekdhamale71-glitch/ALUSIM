@@ -13,10 +13,11 @@
 #include <cmath>
 #include <cstdio>
 
-#include "CG_2310218L/CO1_Primitives/GL.h"
-#include "CG_2310218L/CO3_ObjectAlgorithms/Extrude.h"
-#include "CG_2310218L/CO6_TextureLightColor/Lighting.h"
-#include "CG_2310218L/CO6_TextureLightColor/Texture.h"
+#include "engine/gfx/GL.h"
+#include "engine/gfx/Extrude.h"
+#include "engine/gfx/Clipper.h"
+#include "engine/gfx/Lighting.h"
+#include "engine/gfx/Texture.h"
 #include "app/DatapathLayout.h"
 #include "app/Views.h"
 
@@ -99,6 +100,7 @@ void ChipView::drawChip(const Rect& vp, Sim& sim, UI& ui) {
     glViewport(int(vp.x), int(H - vp.b()), int(vp.w), int(vp.h));
     glEnable(GL_SCISSOR_TEST);
     glScissor(int(vp.x), int(H - vp.b()), int(vp.w), int(vp.h));
+    clipper::setWindow(nullptr);   // 3D: clipped by the view volume and this viewport
     glClearColor(0.03f, 0.05f, 0.1f, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     // backdrop gradient

@@ -18,8 +18,8 @@
 #include <cstdio>
 #include <functional>
 
-#include "CG_2310218L/CO1_Primitives/GL.h"
-#include "CG_2310218L/CO4_ProjectionViewing/Camera.h"
+#include "engine/gfx/GL.h"
+#include "engine/gfx/Camera.h"
 #include "app/Views.h"
 
 namespace vas::ui {

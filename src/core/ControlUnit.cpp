@@ -171,7 +171,7 @@ MicroStep addressStep(const Instruction& ins, const ExecRecord& r, Phase ph = Ph
 } // namespace
 
 // ------------------------------------------------------------ hardwired CU
-// The decoder ROM itself is in COA_2310221L/CO4_ControlUnitPipeline/control_unit.asm:
+// The decoder ROM itself is in engine/asm/CO4_ControlUnitPipeline/control_unit.asm:
 // vas_decode(form) returns the 11 control signals (bits 0..10) and the ALU
 // operation (bits 16..23). Here each word is unpacked for the views.
 const std::vector<DecoderRow>& HardwiredControlUnit::decoderTable() {

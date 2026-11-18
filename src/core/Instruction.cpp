@@ -2,14 +2,25 @@
 
 #include <climits>
 
-#include "PL_2310214L/CO4_SearchingSorting/Searching.h"
-#include "PL_2310214L/CO4_SearchingSorting/Sorting.h"
+#include "engine/ds/Searching.h"
+#include "engine/ds/Sorting.h"
 #include "core/CPU.h"
-#include "PSOOP_2310261L/CO2_ReduceComplexity/Errors.h"
+#include "engine/lang/Errors.h"
 
 namespace vas::core {
 
 long Instruction::executedCount = 0;
+long Instruction::classCount[kInstrClassCount] = {};
+
+void Instruction::countExecution(InstrClass c) {
+    ++executedCount;
+    ++classCount[int(c)];
+}
+
+void Instruction::resetCounts() {
+    executedCount = 0;
+    for (long& n : classCount) n = 0;
+}
 
 // pseudo register used for hazard detection: the flags register
 static constexpr int REG_FLAGS = REG_COUNT;
@@ -327,6 +338,25 @@ void SystemInstr::execute(CPU& cpu, ExecRecord&) const {
     if (mnem_ == "hlt") cpu.halt();
 }
 
+// ------------------------------------------------------------------ creators
+template <typename T>
+static std::unique_ptr<Instruction> makeInstr(const std::string& m, std::vector<Operand> o, int line,
+                                              const std::string& text) {
+    return std::make_unique<T>(m, std::move(o), line, text);
+}
+
+static InstrCreator creatorFor(InstrClass k) {
+    switch (k) {
+        case InstrClass::DataTransfer: return &makeInstr<DataTransferInstr>;
+        case InstrClass::Arithmetic: return &makeInstr<ArithmeticInstr>;
+        case InstrClass::Logic: return &makeInstr<LogicInstr>;
+        case InstrClass::ControlFlow: return &makeInstr<ControlFlowInstr>;
+        case InstrClass::Stack: return &makeInstr<StackInstr>;
+        case InstrClass::System: return &makeInstr<SystemInstr>;
+    }
+    return nullptr;
+}
+
 // ------------------------------------------------------------- opcode table
 OpcodeTable::OpcodeTable() {
     using C = InstrClass;
@@ -365,7 +395,9 @@ OpcodeTable::OpcodeTable() {
         {"nop", C::System, 0, 0, "90", "No operation"},
         {"hlt", C::System, 0, 0, "F4", "Halt the processor"},
     };
-    // sorted once so lookups can use binary search                [PL CO4]
+    for (auto& e : table_) e.create = creatorFor(e.klass);
+    // sorted once, so every lookup can use binary search            [PL CO4]
+    // (this sorted array is the ONLY mnemonic -> instruction mapping)
     ds::quickSort(table_, [](const OpcodeInfo& a, const OpcodeInfo& b) { return a.mnemonic < b.mnemonic; });
 }
 
@@ -381,37 +413,21 @@ const OpcodeInfo* OpcodeTable::lookup(const std::string& mnem, std::vector<int>*
 }
 
 // ------------------------------------------------------------------ factory
-template <typename T>
-static std::unique_ptr<Instruction> makeInstr(const std::string& m, std::vector<Operand> o, int line,
-                                              const std::string& text) {
-    return std::make_unique<T>(m, std::move(o), line, text);
-}
-
-InstructionFactory::InstructionFactory() {
-    for (const auto& info : OpcodeTable::instance().sorted()) {
-        Creator c = nullptr;
-        switch (info.klass) {
-            case InstrClass::DataTransfer: c = &makeInstr<DataTransferInstr>; break;
-            case InstrClass::Arithmetic: c = &makeInstr<ArithmeticInstr>; break;
-            case InstrClass::Logic: c = &makeInstr<LogicInstr>; break;
-            case InstrClass::ControlFlow: c = &makeInstr<ControlFlowInstr>; break;
-            case InstrClass::Stack: c = &makeInstr<StackInstr>; break;
-            case InstrClass::System: c = &makeInstr<SystemInstr>; break;
-        }
-        creators_.put(info.mnemonic, c);
-    }
-}
-
 const InstructionFactory& InstructionFactory::instance() {
     static InstructionFactory f;
     return f;
 }
 
+std::unique_ptr<Instruction> InstructionFactory::create(const OpcodeInfo& info, std::vector<Operand> ops, int line,
+                                                        const std::string& text) const {
+    return info.create(info.mnemonic, std::move(ops), line, text);   // the subclass for this class of opcode
+}
+
 std::unique_ptr<Instruction> InstructionFactory::create(const std::string& mnem, std::vector<Operand> ops, int line,
                                                         const std::string& text) const {
-    const Creator* c = creators_.find(mnem);
-    if (!c) throw InvalidOpcodeError("Unknown instruction '" + mnem + "'", line);
-    return (*c)(mnem, std::move(ops), line, text);
+    const OpcodeInfo* info = OpcodeTable::instance().lookup(mnem);  // binary search
+    if (!info) throw InvalidOpcodeError("Unknown instruction '" + mnem + "'", line);
+    return create(*info, std::move(ops), line, text);
 }
 
 } // namespace vas::core

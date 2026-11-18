@@ -45,6 +45,7 @@ void UI::endFrame() {
     in.pressed = in.released = false;
     in.wheel = 0;
     in.keys.clear();
+    in.paste.clear();
 }
 
 float UI::anim(const std::string& id, float target, float speed) {
@@ -291,6 +292,15 @@ bool UI::codeEditor(const std::string& id, const Rect& r, std::string& text, Edi
     }
     if (hov && in.wheel != 0) st.scroll -= in.wheel * lh * 3;
 
+    if (st.focused && !in.paste.empty()) {      // paste at the cursor
+        text.insert(std::size_t(st.cursor), in.paste);
+        st.cursor += int(in.paste.size());
+        st.preferredCol = -1;
+        st.blink = 0;
+        changed = true;
+        keyboardTaken = true;
+        in.paste.clear();                       // consumed
+    }
     if (st.focused) {
         for (int k : in.keys) {
             int line, col;

@@ -56,7 +56,7 @@ ExecRecord CPU::step() {
 
     pc_ = nextPc_;
     ++steps_;
-    ++Instruction::executedCount;
+    Instruction::countExecution(ins.klass());   // static members  [PSOOP CO4]
     rec.stepNo = steps_;
     rec.nextIndex = pc_;
     rec.flagsAfter = flags_;

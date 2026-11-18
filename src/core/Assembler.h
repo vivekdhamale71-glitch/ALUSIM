@@ -11,7 +11,7 @@
 #include <memory>
 #include <string>
 
-#include "PL_2310214L/CO5_Hashing/HashTable.h"
+#include "engine/ds/HashTable.h"
 #include "core/Instruction.h"
 
 namespace vas::core {

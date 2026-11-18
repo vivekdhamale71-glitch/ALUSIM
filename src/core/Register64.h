@@ -10,7 +10,7 @@
 #include <ostream>
 #include <string>
 
-#include "COA_2310221L/coa_asm.h"
+#include "engine/asm/coa_asm.h"
 
 namespace vas::core {
 
@@ -119,7 +119,7 @@ struct AluResult {
 };
 
 // Combinational ALU: result + status flags. The work is done by
-// vas_alu (COA_2310221L/CO1_Architecture/alu.asm), which runs the real x86
+// vas_alu (engine/asm/CO1_Architecture/alu.asm), which runs the real x86
 // instruction and reads back the processor's own flags.
 class ALU {
 public:

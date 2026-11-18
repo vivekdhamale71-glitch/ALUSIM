@@ -10,7 +10,7 @@
 #include <cmath>
 #include <cstdio>
 
-#include "CG_2310218L/CO4_ProjectionViewing/Scene3D.h"
+#include "engine/gfx/Scene3D.h"
 #include "app/Views.h"
 
 namespace vas::ui {

@@ -1,5 +1,8 @@
 #include "app/Sim.h"
 
+#include "engine/ds/Sorting.h"
+#include "engine/ds/Searching.h"
+
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -126,10 +129,22 @@ void Sim::reset() {
     for (int i = 0; i < REG_COUNT; ++i) { shownRegs[i] = cpu.reg(i).u(); regFlash[i] = 0; }
     shownFlags = cpu.flags();
     Clock::instance().reset();
-    Instruction::executedCount = 0;      // static member shared by every Instruction
+    Instruction::resetCounts();          // static members shared by every Instruction
     ++runGen;
     pipeValid_ = false;
     if (program) status = "Reset - RIP points to the first instruction";
+}
+
+bool Sim::editRegister(int reg, std::uint64_t value) {
+    if (!program || running || animating()) return false;
+    Debugger::setRegister(cpu, reg, value);   // friend of CPU   [PSOOP CO4]
+    shownRegs[reg] = value;
+    regFlash[reg] = 1;
+    history.clear();                           // undo history no longer leads to this state
+    ++runGen;                                  // views recompute (memory, pipeline)
+    pipeValid_ = false;
+    status = std::string("Debugger set ") + regName(reg) + " - Step Back history cleared";
+    return true;
 }
 
 bool Sim::beginNext() {
@@ -320,6 +335,34 @@ int Sim::currentLine() const {
     if (hasCurrent && current.index >= 0 && current.index < int(program->instrLine.size()))
         return program->instrLine[current.index];
     return cpu.currentLine();
+}
+
+const std::vector<MemRow>& Sim::memoryView() {
+    if (!program) {
+        memRows_.clear();
+        return memRows_;
+    }
+    // rebuild only when memory can have changed
+    if (memCompileGen_ == compileGen && memRunGen_ == runGen && memSteps_ == cpu.steps()) return memRows_;
+    memCompileGen_ = compileGen;
+    memRunGen_ = runGen;
+    memSteps_ = cpu.steps();
+
+    if (symCompileGen_ != compileGen) {          // symbols by address: once per program
+        symsByAddr_ = program->data;
+        ds::quickSort(symsByAddr_, [](const DataSymbol& a, const DataSymbol& b) { return a.addr < b.addr; });
+        symCompileGen_ = compileGen;
+    }
+    memRows_.clear();
+    cpu.memory().forEach([&](std::uint64_t a, std::int64_t v) { memRows_.push_back({a, v, ""}); });
+    ds::quickSort(memRows_, [](const MemRow& a, const MemRow& b) { return a.addr < b.addr; });
+    for (MemRow& r : memRows_) {
+        int k = ds::binarySearch(symsByAddr_, r.addr, [](const DataSymbol& d, std::uint64_t key) {
+            return d.addr < key ? -1 : (d.addr > key ? 1 : 0);
+        });
+        r.name = k >= 0 ? symsByAddr_[std::size_t(k)].name : (r.addr >= CPU::kStackLimit ? "stack" : "-");
+    }
+    return memRows_;
 }
 
 const PipelineResult& Sim::pipeline(bool fwd, bool port) {
