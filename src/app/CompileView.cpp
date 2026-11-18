@@ -184,9 +184,18 @@ void CompileView::draw(const Rect& area, Sim& sim, UI& ui) {
     {
         std::string label = "Example " + std::to_string(sim.sampleIndex + 1) + "/" + std::to_string(samples().size()) +
                             "   " + samples()[sim.sampleIndex].name;
-        D::textIn(Face::Semibold, 12, sampleR.inset(34, 0), D::ellipsize(Face::Semibold, 12, label, sampleR.w - 70),
-                  theme::textDim, Align::Center);
+        Rect header = sampleR.inset(34, 0);
+        bool over = ui.hovered(header);
+        if (over) D::roundRect(header, 7, theme::border.alpha(0.35f));
+        D::textIn(Face::Semibold, 12, header, D::ellipsize(Face::Semibold, 12, label + (sampleOpen_ ? "   \xE2\x96\xB2" : "   \xE2\x96\xBC"), sampleR.w - 70),
+                  over ? theme::text : theme::textDim, Align::Center);
+        if (over) ui.tooltip("Pick an example from the list");
+        if (ui.clicked(header)) sampleOpen_ = !sampleOpen_;
     }
+    // the drop-down list sits under the header; while it is open it takes the mouse from what is underneath
+    const float kRowH = 38;
+    Rect menuR(sampleR.x, sampleR.b() + 4, sampleR.w, kRowH * float(samples().size()) + 8);
+    ui.blockMouse(sampleOpen_ && menuR.contains(ui.in.mouse));
 
     int activeLine = -1;
     if (sim.asmMode && sim.hasCurrent) activeLine = sim.currentLine();
@@ -470,6 +479,38 @@ void CompileView::draw(const Rect& area, Sim& sim, UI& ui) {
         sim.hashMethod = ds::HashMethod(nh);
         sim.compile();
         return;
+    }
+
+    // ---- examples drop-down, drawn last so it is on top of everything ----
+    ui.blockMouse(false);
+    if (sampleOpen_) {
+        D::shadow(menuR, 10, 14, Color(0, 0, 0, 0.35f));
+        D::roundRect(menuR, 10, theme::bg1);
+        D::roundRectOutline(menuR, 10, theme::borderHi);
+        const auto& list = samples();
+        const char* modeTag[3] = {"English", "C++", "ASM"};
+        for (int i = 0; i < int(list.size()); ++i) {
+            Rect row(menuR.x + 4, menuR.y + 4 + kRowH * float(i), menuR.w - 8, kRowH);
+            bool over = ui.hovered(row);
+            bool current = i == sim.sampleIndex;
+            if (current) D::roundRect(row, 7, theme::cyan.alpha(0.16f));
+            else if (over) D::roundRect(row, 7, theme::border.alpha(0.45f));
+            D::text(Face::Semibold, 12, row.x + 10, row.y + 4, D::ellipsize(Face::Semibold, 12, list[i].name, row.w - 90),
+                    current ? theme::cyan : theme::text);
+            D::text(Face::Regular, 11, row.x + 10, row.y + 21, D::ellipsize(Face::Regular, 11, list[i].use, row.w - 90),
+                    theme::textMute);
+            D::text(Face::Bold, 10, row.r() - 10, row.y + 12, modeTag[list[i].mode], theme::textMute, Align::Right);
+            if (ui.clicked(row)) {
+                sampleOpen_ = false;
+                sim.loadSample(i);
+                sim.compile();
+                return;
+            }
+        }
+        if (ui.in.released && !menuR.contains(ui.in.mouse) && !sampleR.contains(ui.in.mouse)) sampleOpen_ = false;
+        for (int k : ui.in.keys) {
+            if (k == 27) sampleOpen_ = false;   // Esc
+        }
     }
 }
 

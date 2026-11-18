@@ -49,6 +49,7 @@ private:
     void drawSymbols(const Rect& r, Sim& sim, UI& ui, int ev);
 
     EditorState editor_;
+    bool sampleOpen_ = false;   // the examples drop-down list is open
     int seenGen_ = -1;
     float evTime_ = 0;       // time inside the current timeline event
     int ev_ = 0;             // current timeline event index

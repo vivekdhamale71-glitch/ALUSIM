@@ -6,9 +6,7 @@
 // The problem: turn "c = a + b * 2" into assembly. It is solved in three steps,
 // each one simple on its own.
 
-// ---------------------------------------------------------------------
-// Step 1  the lexer cuts the text into tokens
-// ---------------------------------------------------------------------
+// Step 1: the lexer cuts the text into tokens (words, numbers and single symbols)
 std::vector<std::string> tokenize(const std::string& text) {
     std::vector<std::string> tokens;
     std::string word;
@@ -33,9 +31,7 @@ std::vector<std::string> tokenize(const std::string& text) {
     return tokens;
 }
 
-// ---------------------------------------------------------------------
-// Step 2  the parser puts the expression in postfix order with a stack
-// ---------------------------------------------------------------------
+// how tightly an operator binds: * and / come before + and -
 int precedence(const std::string& op) {
     if (op == "*" || op == "/") {
         return 2;
@@ -47,6 +43,7 @@ bool isOperator(const std::string& token) {
     return token == "+" || token == "-" || token == "*" || token == "/";
 }
 
+// Step 2: the parser puts the expression in postfix order with a stack.
 // "a + b * 2" becomes "a b 2 * +": operands go straight out, an operator waits on the
 // stack until every operator that binds at least as tightly has been written
 std::vector<std::string> toPostfix(const std::vector<std::string>& tokens) {
@@ -71,14 +68,13 @@ std::vector<std::string> toPostfix(const std::vector<std::string>& tokens) {
     return output;
 }
 
-// ---------------------------------------------------------------------
-// Step 3  the code generator walks the postfix with a stack of registers
-// ---------------------------------------------------------------------
+// does the token start with a digit (a constant, not a variable)
 bool isNumber(const std::string& token) {
     return !token.empty() && token[0] >= '0' && token[0] <= '9';
 }
 
-// every operand is loaded into the next free register; every operator combines the top two
+// Step 3: the code generator walks the postfix with a stack of registers.
+// Every operand is loaded into the next free register; every operator combines the top two
 // registers into the lower one and frees the upper one
 std::vector<std::string> generateCode(const std::vector<std::string>& postfix, const std::string& target) {
     const char* registerNames[4] = {"rbx", "rsi", "rdi", "r8"};

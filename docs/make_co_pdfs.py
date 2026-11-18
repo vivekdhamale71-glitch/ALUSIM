@@ -70,8 +70,9 @@ def comment_above(lines, index, marker):
         i -= 1
     description = ""
     for part in parts:                                  # lines of one comment become separate sentences
-        if description and description[-1] not in ".;:!?)":
-            description += "."
+        if description and description[-1] not in ".;:!?),":
+            if part[:1].isupper():
+                description += "."          # a new sentence starts here
         description = (description + " " + part).strip()
     if title and description:
         return title[0].upper() + title[1:] + ": " + description

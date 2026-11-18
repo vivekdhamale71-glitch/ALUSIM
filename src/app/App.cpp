@@ -45,6 +45,7 @@ void App::init(int argc, char** argv) {
     }
 
     int tab = 0, sample = -1, steps = 0, micro = 0;
+    bool scope = false;
     bool finish = false, compile = true, sizeGiven = false;
     std::string codeArg;
     int view3d = 0, subMode = -1;
@@ -55,6 +56,7 @@ void App::init(int argc, char** argv) {
         if (a == "--shot") shotPath_ = next();
         else if (a == "--frames") shotFrames_ = std::atoi(next().c_str());
         else if (a == "--tab") tab = std::atoi(next().c_str());
+        else if (a == "--scope") scope = true;
         else if (a == "--sample") sample = std::atoi(next().c_str());
         else if (a == "--steps") steps = std::atoi(next().c_str());
         else if (a == "--finish") finish = true;
@@ -124,6 +126,8 @@ void App::init(int argc, char** argv) {
     tab_ = std::max(0, std::min(int(views_.size()) - 1, tab));
     static_cast<ChipView*>(views_[5].get())->configure(view3d, flat);
     if (subMode >= 0) views_[tab_]->setSub(subMode);
+    microscope_ = scope;
+    if (scope) UI::get().in.mouse = Vec2(655, 350);
 
     if (sample >= 0) sim_.loadSample(sample);
     if (!codeArg.empty()) {
@@ -259,7 +263,10 @@ void App::handleShortcuts() {
     UI& ui = UI::get();
     for (int k : ui.in.keys) {
         if (k >= K_F1 && k < K_F1 + int(views_.size())) tab_ = k - K_F1;
-        else if (k == K_F11) {
+        else if (k == K_F8) {
+            microscope_ = !microscope_;
+            sim_.toast(microscope_ ? "Microscope on" : "Microscope off", "F8 switches it; move the mouse to look closer", false);
+        } else if (k == K_F11) {
             fullscreen_ = !fullscreen_;
             if (fullscreen_) glutFullScreen();
             else { glutReshapeWindow(1600, 920); glutPositionWindow(60, 40); }
@@ -269,6 +276,66 @@ void App::handleShortcuts() {
         else if (k == K_F10 || k == K_RIGHT) sim_.step();
         else if (k == K_F9 || k == K_LEFT) sim_.stepBack();
     }
+}
+
+// ------------------------------------------------------------- microscope
+// A small square (the lens) follows the mouse; the pixels inside it are copied from the frame
+// and drawn four times bigger in a larger square next to it, with nearest-pixel sampling so every
+// original pixel stays a sharp block.
+void App::drawMicroscope() {
+    const int lens = 48;
+    const int zoom = 4;
+    const float big = float(lens * zoom);
+    UI& ui = UI::get();
+    int mx = int(ui.in.mouse.x), my = int(ui.in.mouse.y);
+    int x0 = std::max(0, std::min(w_ - lens, mx - lens / 2));
+    int y0 = std::max(0, std::min(h_ - lens, my - lens / 2));
+
+    std::vector<unsigned char> px(std::size_t(lens) * lens * 4);
+    glReadBuffer(GL_BACK);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(x0, h_ - y0 - lens, lens, lens, GL_RGBA, GL_UNSIGNED_BYTE, px.data());   // window y points up in GL
+
+    for (std::size_t i = 3; i < px.size(); i += 4) {
+        px[i] = 255;                       // the frame's alpha is not meaningful here: show every pixel solid
+    }
+    static GLuint tex = 0;
+    if (!tex) glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, lens, lens, 0, GL_RGBA, GL_UNSIGNED_BYTE, px.data());
+
+    // the larger square sits below and to the right of the lens, or flips to the other side near the edge
+    float bx = float(x0 + lens + 14);
+    float by = float(y0 + lens + 14);
+    if (bx + big > w_) bx = float(x0) - 14 - big;
+    if (by + big > h_) by = float(y0) - 14 - big;
+    bx = std::max(4.f, bx);
+    by = std::max(4.f, by);
+
+    D::beginFrame(w_, h_);
+    D::shadow(Rect(bx, by, big, big), 6, 16, Color(0, 0, 0, 0.6f));
+    glEnable(GL_TEXTURE_2D);
+    glColor4f(1, 1, 1, 1);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0, 1); glVertex2f(bx, by);                // the picture came from GL, so its v axis is upside down
+    glTexCoord2f(1, 1); glVertex2f(bx + big, by);
+    glTexCoord2f(1, 0); glVertex2f(bx + big, by + big);
+    glTexCoord2f(0, 0); glVertex2f(bx, by + big);
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
+
+    // a cross in the middle of the larger square marks the pixel under the mouse
+    Vec2 mid(bx + big / 2, by + big / 2);
+    D::line(Vec2(mid.x - 8, mid.y), Vec2(mid.x + 8, mid.y), theme::amber, 1.5f);
+    D::line(Vec2(mid.x, mid.y - 8), Vec2(mid.x, mid.y + 8), theme::amber, 1.5f);
+    D::roundRectOutline(Rect(bx, by, big, big), 2, theme::cyan, 2.f);
+    D::roundRectOutline(Rect(float(x0), float(y0), float(lens), float(lens)), 1, theme::cyan, 1.5f);   // the lens
+    D::line(Vec2(float(x0 + lens), float(y0 + lens)), Vec2(bx, by), theme::cyan.alpha(0.5f), 1.f);
+    D::text(Face::Bold, 10, bx + 5, by + big - 15, "x4", theme::cyan);
 }
 
 // ------------------------------------------------------------------ frame
@@ -302,6 +369,7 @@ void App::display() {
     drawTopBar(top);
     drawStatusBar(status);
     drawToast();
+    if (microscope_) drawMicroscope();
     handleShortcuts();
     if (!ui.in.paste.empty())                   // no editor took the pasted text
         sim_.toast("Click the editor first", "Paste goes into the code editor on the Compiler screen", false);

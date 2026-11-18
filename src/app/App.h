@@ -46,6 +46,8 @@ private:
     int frame_ = 0;
     bool fixedStep_ = false;
     bool fullscreen_ = false;
+    bool microscope_ = false;          // F8: a small square under the mouse, magnified in a larger square
+    void drawMicroscope();
     bool useSettings_ = false;
     int savedW_ = 0, savedH_ = 0;
 };

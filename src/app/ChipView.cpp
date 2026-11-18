@@ -297,6 +297,9 @@ void ChipView::drawChip(const Rect& vp, Sim& sim, UI& ui) {
     D::text(Face::Regular, 11, vp.r() - 16, vp.b() - 24,
             "drag to orbit  \xC2\xB7  scroll to zoom  \xC2\xB7  lit, fogged, texture-mapped OpenGL scene", theme::textMute,
             Align::Right);
+
+    D::text(Face::Regular, 10, vp.r() - 16, vp.b() - 42, "Perspective, orthographic, frustum, isometric and oblique projections.",
+            theme::textMute, Align::Right);
 }
 
 } // namespace vas::ui

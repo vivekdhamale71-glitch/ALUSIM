@@ -32,14 +32,11 @@ HOW = {
     ("CG", 5): "We implemented line clipping, polygon clipping and a clipping stage that every shape passes through.",
     ("CG", 6): "We implemented lights and materials, generated textures with mipmaps, fog, the HSV colour model and "
                "alpha blending.",
-    ("PSOOP", 1): "We implemented real-world objects as classes with private data: a bank (inheritance and "
-                  "composition), a library (objects that hold objects) and a translator from English sentences to "
-                  "program statements.",
+    ("PSOOP", 1): "We implemented the objects of the simulator as classes with private data: the processor (registers, flags, counter and memory behind a small interface), the program (an object that owns its instructions, variables and labels, built by an assembler class) and the translator from English sentences to program statements.",
     ("PSOOP", 2): "We implemented an instruction hierarchy that runs through one base class, two control units "
                   "behind one interface, an exception hierarchy caught in one place, and operator overloading for "
                   "registers and vectors.",
-    ("PSOOP", 3): "We implemented a small compiler in three steps (lexer, shunting-yard parser, code generator), a "
-                  "maze solver with breadth-first search and N-Queens with backtracking.",
+    ("PSOOP", 3): "We solved problems of the simulator step by step: a small compiler in three steps (lexer, shunting-yard parser, code generator), the registers an expression needs and how they are handed out, the data hazards of a five-stage pipeline, and the dependencies that decide the order of instructions.",
     ("PSOOP", 4): "We implemented the observer, command with undo and redo, singleton, factory, friend, static member, "
                   "strategy and state patterns.",
 }
