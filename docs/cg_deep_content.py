@@ -188,7 +188,9 @@ CG = [
     ["engine/gfx/Camera.cpp", "orbitCamera(): gluLookAt, gluPerspective, glOrtho and the dolly zoom."],
     ["engine/gfx/Scene3D.cpp", "begin(): viewport, scissor, depth test, perspective and look-at for the pipeline, arithmetic and data views; project()."],
     ["app/ChipView.cpp", "Uses orbitCamera() for the 3D chip and the 3D / 2D switch."],
-    ["CG_2310218L/CO4_ProjectionViewing/", "This PDF; the projection code itself is in the engine files above."]])]),
+    ["CG_2310218L/CO4_ProjectionViewing/projections.cpp", "Perspective, orthographic, frustum, isometric and oblique projections."],
+    ["CG_2310218L/CO4_ProjectionViewing/orbit_camera.cpp", "The orbit camera with gluLookAt and the dolly zoom to a parallel view."],
+    ["CG_2310218L/CO4_ProjectionViewing/multi_view.cpp", "Four viewports showing the front, top, side and perspective views of one scene."]])]),
 ]),
 
 (5, "CO5_Clipping", "Implement the suitable clipping algorithms.", [
@@ -238,7 +240,10 @@ CG = [
     ["engine/gfx/PolygonClip.cpp", "sutherlandHodgman with the interpolation of all attributes."],
     ["engine/gfx/Clipper.cpp", "The stage: accept, reject or clip every polygon, the line classifier and the counters."],
     ["engine/gfx/Draw.cpp", "Calls the stage from every shape, and uses Liang-Barsky for dashed lines."],
-    ["app/DatapathView.cpp", "Clips the bus segments with Cohen-Sutherland and the plot lines with Liang-Barsky."]])]),
+    ["app/DatapathView.cpp", "Clips the bus segments with Cohen-Sutherland and the plot lines with Liang-Barsky."],
+    ["CG_2310218L/CO5_Clipping/line_clipping.cpp", "Cohen-Sutherland and Liang-Barsky line clipping."],
+    ["CG_2310218L/CO5_Clipping/polygon_clipping.cpp", "Sutherland-Hodgman clipping of a polygon against a window."],
+    ["CG_2310218L/CO5_Clipping/clip_stage.cpp", "A clipping stage that accepts, rejects or clips every shape against a window."]])]),
 ]),
 
 (6, "CO6_TextureLightColor", "Design the texture images, light and color using different objects.", [
@@ -279,6 +284,9 @@ CG = [
     ["engine/gfx/Lighting.cpp", "material(), chipLights() (directional and point light) and depthFog()."],
     ["engine/gfx/Scene3D.cpp", "The lights and materials of the pipeline, arithmetic and data views."],
     ["engine/gfx/Draw.cpp, app/ChipView.cpp", "Alpha blending and additive glow."],
-    ["app/ChipView.cpp", "Applies the texture to the board, the lights and the fog to the 3D chip."]])]),
+    ["app/ChipView.cpp", "Applies the texture to the board, the lights and the fog to the 3D chip."],
+    ["CG_2310218L/CO6_TextureLightColor/lighting_materials.cpp", "Directional, point and spot lights and materials with ambient, diffuse, specular and emission."],
+    ["CG_2310218L/CO6_TextureLightColor/texture_mapping.cpp", "A generated texture with mipmaps, filtering and wrapping, and a glyph texture for text."],
+    ["CG_2310218L/CO6_TextureLightColor/fog_and_color.cpp", "Linear fog, HSV to RGB and alpha blending."]])]),
 ]),
 ]
