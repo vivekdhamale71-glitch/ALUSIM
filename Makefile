@@ -10,18 +10,19 @@
 CXX      ?= g++
 CXXFLAGS ?= -std=c++17 -O2 -Wall -Wno-missing-field-initializers
 CXXFLAGS += -Isrc -Ithird_party
-SRC      := $(shell find src -name '*.cpp')
-ASM      := $(shell find src/COA_2310221L -name '*.asm')
+SRC      := $(shell find src/app src/core src/engine -name '*.cpp')
+ASM      := $(shell find src/engine/asm -name '*.asm')
 OBJ      := $(patsubst src/%.cpp,build/obj/%.o,$(SRC))
 ASMOBJ   := $(patsubst src/%.asm,build/obj/%.asm.o,$(ASM))
-CORE     := $(shell find src/core src/PL_2310214L src/PSOOP_2310261L -name '*.cpp')
+CORE     := $(shell find src/core src/engine/ds src/engine/lang -name '*.cpp') \
+            src/engine/gfx/Math.cpp src/engine/gfx/Clip.cpp src/engine/gfx/PolygonClip.cpp
 
 ifeq ($(OS),Windows_NT)
-  LIBS     := -lfreeglut -lglu32 -lopengl32 -lgdi32 -lwinmm
+  LIBS     := -lfreeglut -lglu32 -lopengl32 -lgdi32 -lwinmm -luser32
   TARGET   := build/VirtualALUSim.exe
   ASMFMT   := win64
 else
-  LIBS     := -lglut -lGLU -lGL -lm
+  LIBS     := -lglut -lGLU -lGL -lX11 -lm
   TARGET   := build/VirtualALUSim
   ASMFMT   := elf64
 endif
@@ -36,7 +37,7 @@ build/obj/%.o: src/%.cpp
 	$(CXX) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
 # COA assembly: the ALU, ISA helpers, arithmetic and control unit
-build/obj/%.asm.o: src/%.asm src/COA_2310221L/abi.inc
+build/obj/%.asm.o: src/%.asm src/engine/asm/abi.inc
 	@mkdir -p $(dir $@)
 	nasm -f $(ASMFMT) -Isrc/ -o $@ $<
 

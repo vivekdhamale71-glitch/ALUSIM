@@ -4,9 +4,9 @@
 #include <cstdlib>
 #include <sstream>
 
-#include "PL_2310214L/CO5_Hashing/HashMap.h"
+#include "engine/ds/HashMap.h"
 #include "core/CPU.h"
-#include "PSOOP_2310261L/CO2_ReduceComplexity/Errors.h"
+#include "engine/lang/Errors.h"
 
 namespace vas::core {
 
@@ -290,7 +290,7 @@ std::unique_ptr<Program> Assembler::assemble(const std::string& source, ds::Hash
         if (ops.size() == 2 && ops[1].isCL && p.mnem != "shl" && p.mnem != "shr" && p.mnem != "sal")
             throw SyntaxError("'cl' is only supported as a shift count", p.line);
 
-        prog->code.push_back(factory.create(p.mnem, std::move(ops), p.line, p.text));
+        prog->code.push_back(factory.create(*info, std::move(ops), p.line, p.text));
         prog->instrLine.push_back(p.line);
     }
     if (prog->code.empty()) throw SyntaxError("The program has no instructions", 0);

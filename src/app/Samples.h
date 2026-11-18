@@ -54,6 +54,24 @@ inline const std::vector<Sample>& samples() {
          "int main() {\n    int v = 0x2C;\n    int low = v & 15;\n    int high = v >> 4;\n    v <<= 1;\n"
          "    v ^= 255;\n    return 0;\n}\n",
          MODE_CPP},
+        {"C++: compound interest (hash test)",
+         "// Compound interest: how much do 100 coins grow in 3 years at 5% per year?\n"
+         "// Test the three hash methods on this program's variables:\n"
+         "// s, rate, count, left, index and result all share the same home slot (13).\n"
+         "int main() {\n"
+         "    int s = 100;            // savings\n"
+         "    int rate = 5;           // percent per year\n"
+         "    int count = 3;          // years to wait\n"
+         "    int left = count;       // years still to go\n"
+         "    int index = 0;          // years passed\n"
+         "    int result = s;         // balance\n"
+         "    while (left > 0) {\n"
+         "        result = result + result * rate / 100;   // add one year of interest\n"
+         "        left--;\n"
+         "        index++;\n"
+         "    }\n"
+         "}\n",
+         MODE_CPP},
         // ----------------------------------------------------------- assembly
         {"ASM: loop + CALL / RET",
          "section .data\n    n    dq 5\n    sum  dq 0\n\nsection .text\n_start:\n    mov rcx, [n]\n    xor rax, rax\n"

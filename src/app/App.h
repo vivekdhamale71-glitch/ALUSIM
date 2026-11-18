@@ -30,6 +30,8 @@ private:
     void drawControlCard(const Rect& r);
     void drawStatusBar(const Rect& r);
     void drawToast();
+    void pasteFromClipboard();
+    void syncSettings();               // Settings singleton -> settings.cfg
     void handleShortcuts();
     void saveScreenshot();
 
@@ -44,6 +46,8 @@ private:
     int frame_ = 0;
     bool fixedStep_ = false;
     bool fullscreen_ = false;
+    bool useSettings_ = false;
+    int savedW_ = 0, savedH_ = 0;
 };
 
 } // namespace vas::ui

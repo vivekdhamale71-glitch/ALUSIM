@@ -9,12 +9,16 @@
 #include "core/Arithmetic.h"
 #include "core/Assembler.h"
 #include "core/CPU.h"
-#include "PSOOP_2310261L/CO3_ProblemSolving/Compiler.h"
+#include "engine/lang/Compiler.h"
 #include "core/ControlUnit.h"
-#include "PSOOP_2310261L/CO1_RealWorldOOP/English.h"
+#include "engine/lang/English.h"
 #include "core/Pipeline.h"
-#include "PL_2310214L/CO4_SearchingSorting/Searching.h"
-#include "PL_2310214L/CO4_SearchingSorting/Sorting.h"
+#include "engine/ds/Searching.h"
+#include "engine/ds/Sorting.h"
+#include "engine/gfx/Clip.h"
+#include "engine/gfx/PolygonClip.h"
+#include "engine/ds/LinkedList.h"
+#include "engine/lang/Errors.h"
 
 using namespace vas;
 using namespace vas::core;
@@ -266,6 +270,92 @@ int main() {
             std::printf("  %-18s cap=%d load=%.2f probes=%d collisions=%d\n", h->name().c_str(), h->capacity(),
                         h->loadFactor(), h->totalProbes(), h->collisions());
         }
+    }
+
+    std::puts("== opcode lookup = sort once + binary search (PL CO4)");
+    {
+        const auto& tab = OpcodeTable::instance().sorted();
+        bool sorted = true;
+        for (std::size_t i = 1; i < tab.size(); ++i) if (!(tab[i - 1].mnemonic < tab[i].mnemonic)) sorted = false;
+        CHECK(sorted, "opcode table is sorted");
+        std::vector<int> probes;
+        const OpcodeInfo* info = OpcodeTable::instance().lookup("imul", &probes);
+        CHECK(info && info->mnemonic == "imul", "binary search finds imul");
+        CHECK(probes.size() <= 6, "at most ceil(log2 33) = 6 probes");
+        auto ins = InstructionFactory::instance().create("push", {}, 0, "push rax");
+        CHECK(ins && ins->klass() == InstrClass::Stack, "factory builds a StackInstr from 'push'");
+        bool threw = false;
+        try { InstructionFactory::instance().create("fly", {}, 3, "fly"); } catch (const InvalidOpcodeError& e) { threw = e.line() == 3; }
+        CHECK(threw, "unknown mnemonic -> InvalidOpcodeError with its line");
+    }
+
+    std::puts("== static members: instruction mix (PSOOP CO4)");
+    {
+        Instruction::resetCounts();
+        std::vector<ExecRecord> tr;
+        runSource("i = 0\nwhile (i < 3) { i = i + 1 }", false, &tr);
+        long sum = 0;
+        for (long n : Instruction::classCount) sum += n;
+        CHECK(Instruction::executedCount == long(tr.size()), "executedCount == instructions executed");
+        CHECK(sum == Instruction::executedCount, "class counts add up to executedCount");
+        CHECK(Instruction::classCount[int(InstrClass::ControlFlow)] > 0, "the loop executed control-flow instructions");
+    }
+
+    std::puts("== Debugger is a friend: writes a private register (PSOOP CO4)");
+    {
+        auto prog = Assembler::assemble("section .text\n_start:\n  mov rax, 1\n  hlt\n");
+        CPU cpu;
+        cpu.load(prog.get());
+        Debugger::setRegister(cpu, RBX, 0x1234);
+        CHECK(cpu.reg(RBX).u() == 0x1234, "Debugger::setRegister wrote RBX");
+        CHECK(cpu.steps() == 0, "an edit is not a program step");
+    }
+
+    std::puts("== Settings singleton + file (PSOOP CO4)");
+    {
+        Settings& a = Settings::instance();
+        CHECK(&a == &Settings::instance(), "instance() always returns the same object");
+        SettingsValues keep = a.values;
+        a.values.lightTheme = true;
+        a.values.speed = 2.5f;
+        a.values.hashMethod = 2;
+        const char* path = "test_settings.cfg";
+        CHECK(a.save(path), "settings saved");
+        a.values = SettingsValues{};
+        CHECK(a.load(path) && a.values.lightTheme && a.values.speed == 2.5f && a.values.hashMethod == 2,
+              "settings loaded back");
+        a.values = keep;
+        std::remove(path);
+    }
+
+    std::puts("== circular list: the phase after WB is FETCH (PL CO2)");
+    {
+        ds::CircularLinkedList<int> ring;
+        for (int p = 0; p < 5; ++p) ring.insert(p);
+        CHECK(ring.find(2) && ring.find(2)->next->value == 3, "find(2)->next == 3");
+        CHECK(ring.find(4) && ring.find(4)->next->value == 0, "the last node wraps to the first");
+        CHECK(ring.find(9) == nullptr, "find stops after one lap");
+    }
+
+    std::puts("== clipping (CG CO5)");
+    {
+        gfx::Rect w(0, 0, 100, 100);
+        gfx::Vec2 a(-50, 50), b(150, 50);
+        CHECK(gfx::cohenSutherland(a, b, w) && a.x == 0 && b.x == 100, "Cohen-Sutherland clips to both edges");
+        gfx::Vec2 c(-10, -10), d(-5, 200);
+        CHECK(!gfx::cohenSutherland(c, d, w), "Cohen-Sutherland rejects a line left of the window");
+        float t0, t1;
+        CHECK(gfx::liangBarskyT({-100, 50}, {100, 50}, w, t0, t1) && t0 == 0.5f && t1 == 1.0f, "Liang-Barsky t0 = 0.5");
+        std::vector<gfx::ClipVertex> tri = {{-50, 50, 1, 0, 0, 1}, {50, -50, 0, 1, 0, 1}, {50, 150, 0, 0, 1, 1}};
+        auto out = gfx::sutherlandHodgman(tri, w);
+        bool inside = out.size() >= 3;
+        for (const auto& v : out) if (v.x < -0.001f || v.x > 100.001f || v.y < -0.001f || v.y > 100.001f) inside = false;
+        CHECK(inside, "Sutherland-Hodgman output lies inside the window");
+        std::vector<gfx::ClipVertex> sq = {{-10, 0, 0, 0, 0, 1}, {10, 0, 1, 1, 1, 1}, {10, 10, 1, 1, 1, 1}, {-10, 10, 0, 0, 0, 1}};
+        auto cut = gfx::sutherlandHodgman(sq, w);
+        bool mid = false;
+        for (const auto& v : cut) if (v.x == 0 && v.r > 0.49f && v.r < 0.51f) mid = true;
+        CHECK(mid, "colour is interpolated at the cut (0.5 half way)");
     }
 
     std::printf("\n%d passed, %d failed\n", passes, failures);

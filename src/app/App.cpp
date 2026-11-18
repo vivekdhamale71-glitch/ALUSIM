@@ -1,4 +1,5 @@
 #include "app/App.h"
+#include "app/Clipboard.h"
 
 #include <cmath>
 #include <cstdio>
@@ -6,7 +7,7 @@
 #include <cstring>
 #include <fstream>
 
-#include "CG_2310218L/CO1_Primitives/GL.h"
+#include "engine/gfx/GL.h"
 #include "app/Samples.h"
 
 namespace vas::ui {
@@ -76,6 +77,20 @@ void App::init(int argc, char** argv) {
     if (!shotPath_.empty() && shotFrames_ < 0) shotFrames_ = 90;
     fixedStep_ = !shotPath_.empty();
 
+    // saved preferences (Settings singleton); screenshots ignore them so
+    // they always look the same                                    [PSOOP CO4]
+    useSettings_ = shotPath_.empty();
+    core::Settings& cfg = core::Settings::instance();
+    bool haveCfg = useSettings_ && cfg.load();
+    if (haveCfg) {
+        theme::apply(cfg.values.lightTheme);
+        if (!sizeGiven && cfg.values.windowW >= 800 && cfg.values.windowH >= 600) {
+            w_ = cfg.values.windowW;
+            h_ = cfg.values.windowH;
+            sizeGiven = true;
+        }
+    }
+
     glutSetOption(GLUT_MULTISAMPLE, 8);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE);
     if (!sizeGiven) {
@@ -117,6 +132,12 @@ void App::init(int argc, char** argv) {
                           : (codeArg.find(';') != std::string::npos || codeArg.find('{') != std::string::npos) ? MODE_CPP
                                                                                                              : MODE_ENGLISH);
     }
+    if (haveCfg) {
+        sim_.speed = cfg.values.speed;
+        sim_.hashMethod = ds::HashMethod(cfg.values.hashMethod);
+        if (sample < 0 && codeArg.empty()) sim_.setInputMode(cfg.values.inputMode);
+        if (!micro) micro = cfg.values.microprogrammed;
+    }
     sim_.setMicro(micro != 0);
     if (compile) sim_.compile();
     if (finish) sim_.finish();
@@ -125,6 +146,39 @@ void App::init(int argc, char** argv) {
 }
 
 void App::run() { glutMainLoop(); }
+
+// write settings.cfg only when a preference actually changed
+// Ctrl+V: the text goes to the code editor on the Compiler screen
+void App::pasteFromClipboard() {
+    if (tab_ != 0) {
+        sim_.toast("Nothing to paste into", "Open the Compiler screen (F1) and click the editor first", false);
+        return;
+    }
+    std::string t = sanitizePaste(clipboardText());
+    if (t.empty()) {
+        sim_.toast("Clipboard is empty", "Copy some text first (the clipboard held no text)", false);
+        return;
+    }
+    UI::get().in.paste = t;
+}
+
+void App::syncSettings() {
+    if (!useSettings_) return;
+    core::SettingsValues now;
+    now.lightTheme = theme::light;
+    now.speed = sim_.speed;
+    now.microprogrammed = sim_.micro;
+    now.hashMethod = int(sim_.hashMethod);
+    now.inputMode = sim_.inputMode;
+    now.windowW = fullscreen_ ? savedW_ : w_;
+    now.windowH = fullscreen_ ? savedH_ : h_;
+    if (!fullscreen_) { savedW_ = w_; savedH_ = h_; }
+    core::Settings& cfg = core::Settings::instance();
+    if (now != cfg.values) {
+        cfg.values = now;
+        cfg.save();
+    }
+}
 
 void App::reshape(int w, int h) {
     w_ = std::max(w, 1);
@@ -149,6 +203,7 @@ void App::keyboard(unsigned char key, int, int) {
             sim_.toast(ok ? "Loaded" : "Load failed", ok ? "my_program.txt loaded into the editor" : "my_program.txt not found", !ok);
             return;
         }
+        if (key == 22) { pasteFromClipboard(); return; }   // Ctrl+V
         if (key == 5) {    // Ctrl+E
             bool ok = sim_.exportTrace("trace_log.txt");
             sim_.toast(ok ? "Trace exported" : "Export failed", ok ? "Execution trace written to trace_log.txt" : "Could not write file", !ok);
@@ -173,6 +228,9 @@ void App::special(int key, int, int) {
         case GLUT_KEY_PAGE_UP: k = K_PGUP; break;
         case GLUT_KEY_PAGE_DOWN: k = K_PGDN; break;
         case GLUT_KEY_DELETE: k = K_DELETE; break;
+        case GLUT_KEY_INSERT:
+            if (glutGetModifiers() & GLUT_ACTIVE_SHIFT) pasteFromClipboard();   // Shift+Insert
+            return;
         default:
             if (key >= GLUT_KEY_F1 && key <= GLUT_KEY_F12) k = K_F1 + (key - GLUT_KEY_F1);
     }
@@ -245,8 +303,11 @@ void App::display() {
     drawStatusBar(status);
     drawToast();
     handleShortcuts();
+    if (!ui.in.paste.empty())                   // no editor took the pasted text
+        sim_.toast("Click the editor first", "Paste goes into the code editor on the Compiler screen", false);
     ui.endFrame();
 
+    syncSettings();
     ++frame_;
     if (!shotPath_.empty() && frame_ >= shotFrames_) {
         saveScreenshot();

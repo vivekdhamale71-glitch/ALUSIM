@@ -2,8 +2,8 @@
 // Every view reads these variables, so switching is a single call to apply().
 #pragma once
 #include "core/ControlUnit.h"
-#include "CG_2310218L/CO1_Primitives/Draw.h"
-#include "CG_2310218L/CO2_Transformations/Math.h"
+#include "engine/gfx/Draw.h"
+#include "engine/gfx/Math.h"
 
 namespace vas::ui::theme {
 

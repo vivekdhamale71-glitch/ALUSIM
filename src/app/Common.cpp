@@ -1,11 +1,13 @@
 // Shared helpers for the views: syntax highlighting and the register panel.
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstdio>
+#include <stdexcept>
 #include <cstring>
 
 #include "core/Assembler.h"
-#include "CG_2310218L/CO3_ObjectAlgorithms/Raster.h"
+#include "engine/gfx/Raster.h"
 #include "app/Views.h"
 
 namespace vas::ui {
@@ -141,6 +143,51 @@ void drawAsmLine(float x, float y, const std::string& line, float alpha, int px)
 
 // ------------------------------------------------------------ register panel
 static int gSelectedReg = 0;
+static int gEditReg = -1;          // register being edited, -1 = none
+static std::string gEditText;
+
+// click an already selected register (paused) to edit it        [PSOOP CO4]
+static void beginRegisterEdit(int i, Sim& sim) {
+    if (!sim.loaded()) return;
+    if (sim.running || sim.animating()) {
+        sim.toast("Pause first", "Registers can be edited while the program is paused", false);
+        return;
+    }
+    gEditReg = i;
+    gEditText.clear();
+}
+
+// inline editor: decimal, 0x hex or negative; Enter sets, Esc cancels
+static void registerEditor(const Rect& row, Sim& sim, UI& ui) {
+    ui.keyboardTaken = true;
+    for (int k : ui.in.keys) {
+        if (k == 27) { gEditReg = -1; return; }
+        if (k == 8) {
+            if (!gEditText.empty()) gEditText.pop_back();
+        } else if (k == 13) {
+            try {
+                std::size_t used = 0;
+                std::uint64_t v = (!gEditText.empty() && gEditText[0] == '-')
+                                      ? std::uint64_t(std::stoll(gEditText, &used, 0))
+                                      : std::stoull(gEditText, &used, 0);
+                if (used != gEditText.size()) throw std::invalid_argument("x");
+                sim.editRegister(gEditReg, v);
+            } catch (...) {
+                sim.toast("Not a number", "Type a decimal, 0x hex or negative value", true);
+            }
+            gEditReg = -1;
+            return;
+        } else if (k < 128 && (std::isxdigit(k) || k == 'x' || k == 'X' || k == '-') && gEditText.size() < 20) {
+            gEditText += char(k);
+        }
+    }
+    D::roundRect(row, 7, theme::panel3);
+    D::roundRectOutline(row, 7, theme::cyan, 1.5f);
+    D::textIn(Face::MonoBold, 13, Rect(row.x + 8, row.y, 40, row.h), core::regName(gEditReg), theme::cyan);
+    bool caret = std::fmod(ui.time, 1.0f) < 0.6f;
+    D::textIn(Face::Mono, 13, Rect(row.x + 50, row.y, row.w - 50, row.h), gEditText + (caret ? "|" : " "), theme::text);
+    D::textIn(Face::Regular, 10, Rect(row.x, row.y, row.w - 8, row.h), "Enter / Esc", theme::textMute, Align::Right);
+}
 
 static void drawFlagLed(Vec2 c, const char* name, bool on, float flash, const Color& col) {
     // ring rasterised with the midpoint circle algorithm             [CG CO3]
@@ -193,7 +240,8 @@ void drawRegisterPanel(const Rect& area, Sim& sim, UI& ui) {
         float colW = (c.w - 8) / 2;
         for (int i = 0; i < core::REG_COUNT; ++i) {
             Rect row(c.x + (i / 8) * (colW + 8), c.y + (i % 8) * rowH, colW, rowH - 2);
-            if (ui.clicked(row)) gSelectedReg = i;
+            if (ui.clicked(row)) { if (gSelectedReg == i) beginRegisterEdit(i, sim); gSelectedReg = i; }
+            if (gEditReg == i) { registerEditor(row, sim, ui); continue; }
             float fl = sim.regFlash[i];
             if (i == gSelectedReg) D::roundRect(row, 6, theme::panel3.alpha(0.9f));
             if (fl > 0.01f) {
@@ -210,7 +258,8 @@ void drawRegisterPanel(const Rect& area, Sim& sim, UI& ui) {
     for (int i = 0; i < core::REG_COUNT && !compact; ++i) {
         Rect row(c.x, c.y + i * rowH, c.w, rowH - 2);
         bool hov = ui.hovered(row);
-        if (ui.clicked(row)) gSelectedReg = i;
+        if (ui.clicked(row)) { if (gSelectedReg == i) beginRegisterEdit(i, sim); gSelectedReg = i; }
+        if (gEditReg == i) { registerEditor(row, sim, ui); continue; }
         float fl = sim.regFlash[i];
         if (i == gSelectedReg) D::roundRect(row, 7, theme::panel3.alpha(0.9f));
         else if (hov) D::roundRect(row, 7, theme::panel3.alpha(0.45f));
@@ -277,25 +326,27 @@ void drawRegisterPanel(const Rect& area, Sim& sim, UI& ui) {
     drawFlagLed(Vec2(fx + 2 * step, flags.y + 18), "SF", f.SF, sim.flagFlash, theme::pink);
     drawFlagLed(Vec2(fx + 3 * step, flags.y + 18), "OF", f.OF, sim.flagFlash, theme::red);
 
-    // memory
+    // memory: every used word, sorted by address (Sim::memoryView)   [PL CO4]
+    const auto& rows = sim.memoryView();
     Rect m = ui.card(memCard, "DATA MEMORY", theme::pink,
-                     sim.program ? std::to_string(sim.program->data.size()) + " variables" : "");
-    if (!sim.program || sim.program->data.empty()) {
+                     sim.program ? std::to_string(rows.size()) + (rows.size() == 1 ? " word" : " words") + "  \xC2\xB7  by address" : "");
+    if (!sim.program || rows.empty()) {
         D::textIn(Face::Regular, 12, m, "Variables appear here after compiling", theme::textMute, Align::Center);
         return;
     }
     D::pushClip(m);
     float y = m.y;
-    for (const auto& d : sim.program->data) {
+    for (const auto& r : rows) {
         Rect row(m.x, y, m.w, 24);
-        bool flash = sim.memFlash > 0.01f && sim.lastMemWrite == d.addr;
+        bool flash = sim.memFlash > 0.01f && sim.lastMemWrite == r.addr;
         if (flash) D::roundRect(row, 6, theme::pink.alpha(0.25f * sim.memFlash));
-        std::int64_t val = sim.cpu.loaded() ? sim.cpu.peek(d.addr) : d.init;
-        D::textIn(Face::MonoBold, 13, Rect(row.x + 6, row.y, 90, row.h), d.name, theme::text);
+        bool isVar = r.name != "stack" && r.name != "-";
+        D::textIn(isVar ? Face::MonoBold : Face::Mono, 13, Rect(row.x + 6, row.y, 90, row.h), r.name,
+                  isVar ? theme::text : theme::textMute);
         char ad[24];
-        std::snprintf(ad, sizeof ad, "[0x%04llX]", static_cast<unsigned long long>(d.addr));
+        std::snprintf(ad, sizeof ad, "[0x%04llX]", static_cast<unsigned long long>(r.addr));
         D::textIn(Face::Mono, 11, Rect(row.x + 100, row.y, 90, row.h), ad, theme::textMute);
-        D::textIn(Face::MonoBold, 13, Rect(row.x, row.y, row.w - 6, row.h), std::to_string(val),
+        D::textIn(Face::MonoBold, 13, Rect(row.x, row.y, row.w - 6, row.h), std::to_string(r.value),
                   flash ? theme::pink.lighten(0.3f) : theme::amber, Align::Right);
         y += 25;
     }

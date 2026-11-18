@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "core/Arithmetic.h"
-#include "PL_2310214L/CO5_Hashing/HashTable.h"
-#include "PL_2310214L/CO4_SearchingSorting/Searching.h"
-#include "PL_2310214L/CO4_SearchingSorting/Sorting.h"
+#include "engine/ds/HashTable.h"
+#include "engine/ds/Searching.h"
+#include "engine/ds/Sorting.h"
 #include "app/Sim.h"
 #include "app/UI.h"
 

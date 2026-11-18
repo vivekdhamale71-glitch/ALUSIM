@@ -14,9 +14,9 @@
 #include <cmath>
 #include <cstdio>
 
-#include "CG_2310218L/CO5_Clipping/Clip.h"
-#include "CG_2310218L/CO1_Primitives/GL.h"
-#include "CG_2310218L/CO3_ObjectAlgorithms/Raster.h"
+#include "engine/gfx/Clip.h"
+#include "engine/gfx/GL.h"
+#include "engine/gfx/Raster.h"
 #include "app/DatapathLayout.h"
 #include "app/Views.h"
 
@@ -80,17 +80,10 @@ const std::vector<CtrlLine>& controlLines() {
 void fillScanline(const std::vector<Vec2>& poly, const Color& top, const Color& bottom, float y0, float y1) {
     // scanline polygon fill with a vertical gradient                  [CG CO3]
     auto spans = scanlineFill(poly);
-    glBegin(GL_QUADS);
-    for (const auto& s : spans) {
+    for (const auto& s : spans) {               // one 1-pixel-high strip per span
         float t = clampf((s.y - y0) / std::max(1.f, y1 - y0), 0, 1);
-        Color c = top.lerp(bottom, t);
-        glColor4f(c.r, c.g, c.b, c.a);
-        glVertex2f(s.x0, float(s.y));
-        glVertex2f(s.x1, float(s.y));
-        glVertex2f(s.x1, float(s.y + 1));
-        glVertex2f(s.x0, float(s.y + 1));
+        D::rect(Rect(s.x0, float(s.y), s.x1 - s.x0, 1), top.lerp(bottom, t));
     }
-    glEnd();
 }
 
 float pathLength(const std::vector<Vec2>& p) {

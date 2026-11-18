@@ -13,7 +13,7 @@
 #include <cmath>
 #include <cstdio>
 
-#include "CG_2310218L/CO4_ProjectionViewing/Scene3D.h"
+#include "engine/gfx/Scene3D.h"
 #include "app/Views.h"
 
 namespace vas::ui {
@@ -61,13 +61,13 @@ void DataLabView::draw(const Rect& area, Sim& sim, UI& ui) {
 
 // ================================================================= hashing
 void DataLabView::drawHashing(const Rect& area, Sim& sim, UI& ui) {
-    // key set: the program's own symbols and labels, topped up with demo names
+    // key set: the program's own symbols and labels, topped up with filler names
     std::vector<std::string> keys;
     if (sim.compiledOk) for (const auto& s : sim.compiled.symbols) keys.push_back(s.name);
     if (sim.program) for (const auto& l : sim.program->labels) keys.push_back(l.first);
     if (sim.program && sim.asmMode) for (const auto& d : sim.program->data) keys.push_back(d.name);
-    const char* demo[] = {"count", "total", "i", "n", "max", "temp", "flag", "avg", "x", "y", "key", "ptr"};
-    for (const char* d : demo) {
+    const char* fillerNames[] = {"count", "total", "i", "n", "max", "temp", "flag", "avg", "x", "y", "key", "ptr"};
+    for (const char* d : fillerNames) {
         if (keys.size() >= 11) break;
         if (std::find(keys.begin(), keys.end(), d) == keys.end()) keys.push_back(d);
     }
@@ -264,7 +264,7 @@ void DataLabView::drawSorting(const Rect& area, Sim& sim, UI& ui) {
     } else {
         labels = {"mov", "add", "cmp", "jle", "imul", "sub", "jmp", "hlt", "push", "pop"};
         data = {14, 6, 9, 9, 4, 5, 8, 1, 3, 3};
-        source = "demo data - run a program to sort its real instruction counts";
+        source = "sample data - run a program to sort its real instruction counts";
     }
     std::string key = std::to_string(sortAlgo_);
     for (std::size_t i = 0; i < data.size(); ++i) key += "|" + labels[i] + ":" + std::to_string(data[i]);

@@ -9,7 +9,7 @@
 #include <cmath>
 #include <cstdio>
 
-#include "CG_2310218L/CO4_ProjectionViewing/Scene3D.h"
+#include "engine/gfx/Scene3D.h"
 #include "app/Views.h"
 
 namespace vas::ui {
@@ -69,9 +69,34 @@ void PipelineView::draw(const Rect& area, Sim& sim, UI& ui) {
     ui.toggle("fwd", Rect(sc.x, sc.y - 4, sc.w, 28), forwarding_, "Data forwarding (bypass)");
     ui.toggle("port", Rect(sc.x, sc.y + 26, sc.w, 28), singlePort_, "Single memory port (structural)");
     if (f != forwarding_ || sp != singlePort_) { cycle_ = 0; playing_ = true; }
-    if (!sim.cpu.halted())
+    if (!sim.cpu.halted()) {
         D::text(Face::Regular, 11, sc.x, sc.y + 58, "trace so far: " + std::to_string(sim.trace.size()) + " instructions",
                 theme::amber);
+    } else if (Instruction::executedCount > 0) {
+        // instruction mix: the static per-class counters shared by every
+        // Instruction object (Instruction::classCount)              [PSOOP CO4]
+        static const char* cls[kInstrClassCount] = {"data", "arith", "logic", "control", "stack", "system"};
+        const Color colr[kInstrClassCount] = {theme::cyan, theme::amber, theme::violet, theme::pink, theme::green,
+                                              theme::textDim};
+        float total = float(Instruction::executedCount), x = sc.x;
+        Rect bar(sc.x, sc.y + 59, 84, 7);
+        D::roundRect(bar, 3, theme::bg1);
+        int order[kInstrClassCount] = {0, 1, 2, 3, 4, 5};
+        std::sort(order, order + kInstrClassCount,
+                  [](int a, int b) { return Instruction::classCount[a] > Instruction::classCount[b]; });
+        for (int k = 0; k < kInstrClassCount; ++k) {
+            float w = bar.w * float(Instruction::classCount[k]) / total;
+            if (w > 0) D::rect(Rect(x, bar.y, w, bar.h), colr[k]);
+            x += w;
+        }
+        std::string mix = "mix:";
+        for (int k = 0; k < 3; ++k) {
+            int c = order[k];
+            if (!Instruction::classCount[c]) break;
+            mix += "  " + std::string(cls[c]) + " " + std::to_string(int(100 * Instruction::classCount[c] / total + 0.5f)) + "%";
+        }
+        D::text(Face::Regular, 11, bar.r() + 8, sc.y + 54, mix, theme::textDim);
+    }
 
     float tw = (top.w - 4 * 10) / 5;
     char b1[32], b2[32];

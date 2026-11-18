@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "CG_2310218L/CO1_Primitives/Draw.h"
+#include "engine/gfx/Draw.h"
 #include "app/Theme.h"
 
 namespace vas::ui {
@@ -28,6 +28,7 @@ struct Input {
     bool rdown = false;
     float wheel = 0;
     std::vector<int> keys;     // chars (ASCII) and Key codes typed this frame
+    std::string paste;         // text pasted this frame (Ctrl+V / Shift+Insert), already sanitised
     bool ctrl = false, shift = false, alt = false;
 };
 

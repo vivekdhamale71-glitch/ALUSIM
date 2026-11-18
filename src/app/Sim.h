@@ -14,12 +14,12 @@
 
 #include "core/Assembler.h"
 #include "core/CPU.h"
-#include "PSOOP_2310261L/CO3_ProblemSolving/Compiler.h"
+#include "engine/lang/Compiler.h"
 #include "core/ControlUnit.h"
-#include "PSOOP_2310261L/CO1_RealWorldOOP/English.h"
+#include "engine/lang/English.h"
 #include "core/Pipeline.h"
-#include "PL_2310214L/CO2_LinkedLists/LinkedList.h"
-#include "PL_2310214L/CO3_StackQueue/Queue.h"
+#include "engine/ds/LinkedList.h"
+#include "engine/ds/Queue.h"
 
 namespace vas::ui {
 
@@ -29,6 +29,13 @@ struct SignalSample {
     std::string label;
     long cycle = 0;
     bool boundary = false;   // first micro-step of an instruction
+};
+
+// one used memory word, for the Data Memory panel
+struct MemRow {
+    std::uint64_t addr = 0;
+    std::int64_t value = 0;
+    std::string name;              // variable name, "stack" or "-"
 };
 
 struct HistoryEntry {
@@ -85,6 +92,8 @@ public:
     float memFlash = 0;
 
     void reset();
+    // user edit of a register while paused, done by the friend class Debugger
+    bool editRegister(int reg, std::uint64_t value);
     void step();                   // animate the next instruction
     void stepBack();
     void toggleRun();
@@ -97,6 +106,10 @@ public:
 
     // ---- derived data ----------------------------------------------------
     const core::PipelineResult& pipeline(bool forwarding, bool singlePort);
+    // every used memory word in address order. Memory is a HashMap (no
+    // order), so the words are quick-sorted by address, and each address
+    // is named by binary search in the symbols sorted by address  [PL CO4]
+    const std::vector<MemRow>& memoryView();
 
     // ---- messages ----------------------------------------------------------
     std::string status = "Ready - type a statement and press Compile";
@@ -122,6 +135,10 @@ private:
     bool pipeFwd_ = true, pipePort_ = false;
     std::size_t pipeTraceSize_ = 0;
     int pipeRunGen_ = -1;
+    std::vector<MemRow> memRows_;
+    std::vector<core::DataSymbol> symsByAddr_;
+    int memCompileGen_ = -1, memRunGen_ = -1, symCompileGen_ = -1;
+    long memSteps_ = -1;
 };
 
 } // namespace vas::ui
